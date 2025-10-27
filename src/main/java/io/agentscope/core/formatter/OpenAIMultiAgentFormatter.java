@@ -314,9 +314,11 @@ public class OpenAIMultiAgentFormatter
             if (block instanceof TextBlock tb) {
                 if (sb.length() > 0) sb.append("\n");
                 sb.append(tb.getText());
-            } else if (block instanceof ThinkingBlock tb) {
-                if (sb.length() > 0) sb.append("\n");
-                sb.append(tb.getThinking());
+            } else if (block instanceof ThinkingBlock) {
+                // IMPORTANT: ThinkingBlock is NOT sent back to OpenAI API
+                // (matching Python implementation and other formatters' behavior)
+                // ThinkingBlock is stored in memory but skipped when formatting messages
+                log.debug("Skipping ThinkingBlock when formatting message for OpenAI API");
             } else if (block instanceof ToolResultBlock toolResult) {
                 ContentBlock output = toolResult.getOutput();
                 if (output instanceof TextBlock textBlock) {
