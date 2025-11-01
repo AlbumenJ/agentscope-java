@@ -214,6 +214,19 @@ public class ReActAgent extends AgentBase {
     }
 
     /**
+     * Call with structured output support (no new messages).
+     * Generates a response conforming to the specified JSON schema based on current memory state.
+     * The structured data will be stored in the returned message's metadata field.
+     *
+     * @param structuredOutputClass Class defining the structure of the output
+     * @return Mono containing response message with structured data in metadata
+     */
+    @Override
+    public Mono<Msg> call(Class<?> structuredOutputClass) {
+        return callWithToolBasedStructuredOutput(List.of(), structuredOutputClass);
+    }
+
+    /**
      * Generate structured output using tool-based approach (multiple messages).
      * Creates a temporary "generate_response" tool that the agent must call with the structured
      * data. Returns a message with the structured data stored in metadata.

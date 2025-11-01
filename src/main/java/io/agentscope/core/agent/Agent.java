@@ -114,15 +114,10 @@ public interface Agent {
      * <p>The structured model parameter defines the expected structure of output data.
      * The structured data will be stored in the returned message's metadata field.
      *
-     * <p>Default implementation ignores the structuredModel parameter. Agents that support
-     * structured output should override this method.
-     *
      * @param structuredModel Optional class defining the structure
      * @return Response message with structured data in metadata
      */
-    default Mono<Msg> call(Class<?> structuredModel) {
-        return call();
-    }
+    Mono<Msg> call(Class<?> structuredModel);
 
     /**
      * Observe a message without generating a reply.
