@@ -20,6 +20,7 @@ import io.agentscope.core.agent.AgentBase;
 import io.agentscope.core.agent.accumulator.ReasoningContext;
 import io.agentscope.core.hook.Hook;
 import io.agentscope.core.interruption.InterruptContext;
+import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.memory.Memory;
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.Msg;
@@ -150,7 +151,7 @@ public class ReActAgent extends AgentBase {
             List<Hook> hooks) {
         super(name, hooks);
         // ReActAgent manages its own memory
-        this.memory = memory != null ? memory : new io.agentscope.core.memory.InMemoryMemory();
+        this.memory = memory != null ? memory : new InMemoryMemory();
         this.sysPrompt = sysPrompt;
         this.model = model;
         this.toolkit = toolkit;
