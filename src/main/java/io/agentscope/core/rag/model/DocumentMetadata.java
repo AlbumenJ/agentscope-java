@@ -15,18 +15,22 @@
  */
 package io.agentscope.core.rag.model;
 
-import java.util.Map;
+import io.agentscope.core.message.ContentBlock;
+import io.agentscope.core.message.TextBlock;
 
 /**
  * Document metadata containing content and chunking information.
  *
  * <p>This class stores metadata about a document chunk, including the content
- * (which can be text, image, or other types), document ID, chunk ID, and total
+ * (which can be text, image, video, etc.), document ID, chunk ID, and total
  * number of chunks.
+ *
+ * <p>The content field uses {@link ContentBlock} which is a sealed hierarchy
+ * supporting different content types (TextBlock, ImageBlock, VideoBlock, etc.).
  */
 public class DocumentMetadata {
 
-    private final Map<String, Object> content;
+    private final ContentBlock content;
     private final String docId;
     private final int chunkId;
     private final int totalChunks;
@@ -34,13 +38,12 @@ public class DocumentMetadata {
     /**
      * Creates a new DocumentMetadata instance.
      *
-     * @param content the content map (supports text, image, etc.)
+     * @param content the content block (text, image, video, etc.)
      * @param docId the document ID
      * @param chunkId the chunk ID within the document
      * @param totalChunks the total number of chunks in the document
      */
-    public DocumentMetadata(
-            Map<String, Object> content, String docId, int chunkId, int totalChunks) {
+    public DocumentMetadata(ContentBlock content, String docId, int chunkId, int totalChunks) {
         if (content == null) {
             throw new IllegalArgumentException("Content cannot be null");
         }
@@ -63,11 +66,11 @@ public class DocumentMetadata {
     }
 
     /**
-     * Gets the content map.
+     * Gets the content block.
      *
-     * @return the content map
+     * @return the content block
      */
-    public Map<String, Object> getContent() {
+    public ContentBlock getContent() {
         return content;
     }
 
@@ -99,14 +102,18 @@ public class DocumentMetadata {
     }
 
     /**
-     * Gets the text content from the content map.
+     * Gets the text content from the content block.
      *
-     * <p>This is a convenience method that extracts the "text" key from the content map.
+     * <p>This is a convenience method that extracts text from the ContentBlock.
+     * For TextBlock, it returns the text. For other block types, it returns their
+     * string representation.
      *
-     * @return the text content, or empty string if not present
+     * @return the text content, or empty string if not available
      */
     public String getContentText() {
-        Object textObj = content.get("text");
-        return textObj != null ? textObj.toString() : "";
+        if (content instanceof TextBlock textBlock) {
+            return textBlock.getText();
+        }
+        return content != null ? content.toString() : "";
     }
 }

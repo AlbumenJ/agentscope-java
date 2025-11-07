@@ -20,12 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.agentscope.core.message.ImageBlock;
+import io.agentscope.core.message.URLSource;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
 import io.agentscope.core.rag.model.ReaderException;
 import io.agentscope.core.rag.model.ReaderInput;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -83,9 +84,10 @@ class ImageReaderTest {
                             DocumentMetadata metadata = doc.getMetadata();
                             assertNotNull(metadata);
 
-                            Map<String, Object> content = metadata.getContent();
-                            assertEquals("image", content.get("type"));
-                            assertNotNull(content.get("source"));
+                            // Content should be an ImageBlock
+                            assertTrue(metadata.getContent() instanceof ImageBlock);
+                            ImageBlock imageBlock = (ImageBlock) metadata.getContent();
+                            assertNotNull(imageBlock.getSource());
                         })
                 .verifyComplete();
     }
@@ -102,12 +104,14 @@ class ImageReaderTest {
                             assertEquals(1, documents.size());
                             Document doc = documents.get(0);
                             DocumentMetadata metadata = doc.getMetadata();
-                            Map<String, Object> content = metadata.getContent();
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> source =
-                                    (Map<String, Object>) content.get("source");
-                            assertEquals("url", source.get("type"));
-                            assertEquals("https://example.com/image.png", source.get("url"));
+
+                            // Content should be an ImageBlock with URLSource
+                            assertTrue(metadata.getContent() instanceof ImageBlock);
+                            ImageBlock imageBlock = (ImageBlock) metadata.getContent();
+                            assertNotNull(imageBlock.getSource());
+                            assertTrue(imageBlock.getSource() instanceof URLSource);
+                            URLSource urlSource = (URLSource) imageBlock.getSource();
+                            assertEquals("https://example.com/image.png", urlSource.getUrl());
                         })
                 .verifyComplete();
     }

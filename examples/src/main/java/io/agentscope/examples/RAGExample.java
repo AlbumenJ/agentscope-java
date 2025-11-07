@@ -97,7 +97,11 @@ public class RAGExample {
 
         // Create vector store
         System.out.println("Creating vector store...");
-        VDBStoreBase vectorStore = new QdrantStore("http://47.57.181.116:6333", "test_collection", 1024);
+        VDBStoreBase vectorStore = QdrantStore.builder().location("http://47.57.181.116:6333")
+                .collectionName("test_collection" + System.currentTimeMillis())
+                .dimensions(1024)
+                .useTransportLayerSecurity(false)
+                .build();
         System.out.println("✓ Vector store created\n");
 
         // Create knowledge base

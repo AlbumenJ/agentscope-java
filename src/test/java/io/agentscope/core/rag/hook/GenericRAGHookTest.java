@@ -351,8 +351,9 @@ class GenericRAGHookTest {
      * Creates a test document.
      */
     private Document createDocument(String docId, String content) {
-        Map<String, Object> contentMap = Map.of("text", content);
-        DocumentMetadata metadata = new DocumentMetadata(contentMap, docId, 0, 1);
+        io.agentscope.core.message.TextBlock textBlock =
+                io.agentscope.core.message.TextBlock.builder().text(content).build();
+        DocumentMetadata metadata = new DocumentMetadata(textBlock, docId, 0, 1);
         return new Document(metadata);
     }
 

@@ -16,21 +16,16 @@
 package io.agentscope.core.rag.knowledge.impl;
 
 import io.agentscope.core.message.ContentBlock;
-import io.agentscope.core.message.ImageBlock;
 import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.message.URLSource;
 import io.agentscope.core.rag.EmbeddingModel;
 import io.agentscope.core.rag.KnowledgeBase;
 import io.agentscope.core.rag.VDBStoreBase;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
 import io.agentscope.core.rag.model.RetrieveConfig;
-import io.agentscope.core.rag.model.VectorSearchResult;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -45,8 +40,8 @@ import reactor.core.publisher.Mono;
  *
  * <p>Workflow:
  * <ul>
- *   <li><b>addDocuments:</b> Embed documents → Store vectors → Cache documents
- *   <li><b>retrieve:</b> Embed query → Search vectors → Filter by threshold → Return documents
+ *   <li><b>addDocuments:</b> Embed documents → Store documents (with metadata/payload) in vector store
+ *   <li><b>retrieve:</b> Embed query → Search documents → Filter by threshold → Return documents
  * </ul>
  *
  * <p>Example usage:
@@ -70,7 +65,6 @@ public class SimpleKnowledge implements KnowledgeBase {
 
     private final EmbeddingModel embeddingModel;
     private final VDBStoreBase embeddingStore;
-    private final Map<String, Document> documentCache;
 
     /**
      * Creates a new SimpleKnowledge instance.
@@ -88,7 +82,6 @@ public class SimpleKnowledge implements KnowledgeBase {
         }
         this.embeddingModel = embeddingModel;
         this.embeddingStore = embeddingStore;
-        this.documentCache = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -117,25 +110,20 @@ public class SimpleKnowledge implements KnowledgeBase {
                                     .doOnNext(embedding -> doc.setEmbedding(embedding))
                                     .thenReturn(doc);
                         })
+                .collectList()
                 .flatMap(
-                        doc -> {
-                            // Store vector in vector store
-                            return embeddingStore
-                                    .add(doc.getId(), doc.getEmbedding())
-                                    .doOnSuccess(
-                                            id -> {
-                                                // Cache document for later retrieval
-                                                documentCache.put(id, doc);
-                                            })
-                                    .thenReturn(doc);
+                        docsWithEmbeddings -> {
+                            // Batch store documents in vector store (includes metadata/payload)
+                            if (docsWithEmbeddings.isEmpty()) {
+                                return Mono.empty();
+                            }
+                            return embeddingStore.add(docsWithEmbeddings);
                         })
                 .onErrorResume(
                         error -> {
                             log.error("Failed to add documents to knowledge base", error);
-                            // Continue processing other documents
                             return Mono.empty();
-                        })
-                .then();
+                        });
     }
 
     @Override
@@ -154,11 +142,12 @@ public class SimpleKnowledge implements KnowledgeBase {
         TextBlock queryBlock = TextBlock.builder().text(query).build();
         return embeddingModel
                 .embed(queryBlock)
-                .flatMap(queryEmbedding -> embeddingStore.search(queryEmbedding, config.getLimit()))
+                .flatMap(
+                        queryEmbedding ->
+                                embeddingStore.search(queryEmbedding, config.getLimit(), null))
                 .flatMap(
                         results ->
                                 Flux.fromIterable(results)
-                                        .map(result -> createDocumentFromResult(result, config))
                                         .filter(
                                                 doc ->
                                                         doc != null
@@ -174,56 +163,43 @@ public class SimpleKnowledge implements KnowledgeBase {
     }
 
     /**
-     * Creates a Document from a VectorSearchResult.
-     *
-     * <p>Retrieves the original document from cache and sets the similarity score.
-     *
-     * @param result the vector search result
-     * @param config the retrieval config (for potential future use)
-     * @return a Document with the score set, or null if document not found in cache
-     */
-    private Document createDocumentFromResult(VectorSearchResult result, RetrieveConfig config) {
-        Document originalDoc = documentCache.get(result.getId());
-        if (originalDoc == null) {
-            log.warn("Document not found in cache for ID: {}", result.getId());
-            return null;
-        }
-
-        // Create a copy with the score set
-        // Note: Document is immutable in terms of ID and metadata, but we can set score
-        Document docWithScore = new Document(originalDoc.getMetadata());
-        docWithScore.setEmbedding(originalDoc.getEmbedding());
-        docWithScore.setScore(result.getScore());
-
-        return docWithScore;
-    }
-
-    /**
      * Gets the number of documents currently stored in the knowledge base.
      *
-     * @return the number of stored documents
+     * <p>Note: This method is not supported by all vector stores. For stores that don't
+     * support size queries, this will return -1.
+     *
+     * @return the number of stored documents, or -1 if not supported
      */
     public int size() {
-        return documentCache.size();
+        // Vector stores typically don't expose size directly
+        // This would require additional API support
+        return -1;
     }
 
     /**
      * Checks if the knowledge base is empty.
      *
-     * @return true if the knowledge base contains no documents
+     * <p>Note: This method is not supported by all vector stores. For stores that don't
+     * support emptiness checks, this will return false.
+     *
+     * @return true if the knowledge base contains no documents, false otherwise
      */
     public boolean isEmpty() {
-        return documentCache.isEmpty();
+        // Vector stores typically don't expose emptiness checks directly
+        // This would require additional API support
+        return false;
     }
 
     /**
      * Clears all documents from the knowledge base.
      *
-     * <p>Note: This only clears the document cache. The vector store may still contain
-     * vectors. For a complete cleanup, you may need to clear the vector store separately.
+     * <p>Note: This method is not supported by all vector stores. For stores that don't
+     * support clearing, this will do nothing.
      */
     public void clear() {
-        documentCache.clear();
+        // Vector stores typically don't support clearing directly
+        // This would require additional API support or manual deletion
+        log.warn("clear() is not supported for vector stores");
     }
 
     /**
@@ -245,55 +221,14 @@ public class SimpleKnowledge implements KnowledgeBase {
     }
 
     /**
-     * Extracts a ContentBlock from DocumentMetadata's content map.
+     * Extracts a ContentBlock from DocumentMetadata.
      *
-     * <p>Supports:
-     * <ul>
-     *   <li>Text content: content map with "text" key → TextBlock
-     *   <li>Image content: content map with "type": "image" and "source" → ImageBlock
-     * </ul>
+     * <p>Since DocumentMetadata now directly stores ContentBlock, this method simply returns it.
      *
      * @param metadata the document metadata
-     * @return ContentBlock extracted from metadata, or null if extraction fails
+     * @return ContentBlock from metadata, or null if not available
      */
     private ContentBlock extractContentBlock(DocumentMetadata metadata) {
-        Map<String, Object> content = metadata.getContent();
-        if (content == null) {
-            return null;
-        }
-
-        // Check for image content
-        Object typeObj = content.get("type");
-        if (typeObj != null && "image".equals(typeObj.toString())) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> sourceMap = (Map<String, Object>) content.get("source");
-            if (sourceMap != null) {
-                Object sourceTypeObj = sourceMap.get("type");
-                if (sourceTypeObj != null) {
-                    String sourceType = sourceTypeObj.toString();
-                    if ("url".equals(sourceType)) {
-                        Object urlObj = sourceMap.get("url");
-                        if (urlObj != null) {
-                            URLSource source = URLSource.builder().url(urlObj.toString()).build();
-                            return ImageBlock.builder().source(source).build();
-                        }
-                    } else if ("file".equals(sourceType)) {
-                        Object pathObj = sourceMap.get("path");
-                        if (pathObj != null) {
-                            URLSource source = URLSource.builder().url(pathObj.toString()).build();
-                            return ImageBlock.builder().source(source).build();
-                        }
-                    }
-                }
-            }
-        }
-
-        // Default to text content
-        String text = metadata.getContentText();
-        if (text != null && !text.trim().isEmpty()) {
-            return TextBlock.builder().text(text).build();
-        }
-
-        return null;
+        return metadata.getContent();
     }
 }

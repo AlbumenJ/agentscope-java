@@ -15,7 +15,7 @@
  */
 package io.agentscope.core.rag;
 
-import io.agentscope.core.rag.model.VectorSearchResult;
+import io.agentscope.core.rag.model.Document;
 import java.util.List;
 import reactor.core.publisher.Mono;
 
@@ -24,26 +24,47 @@ import reactor.core.publisher.Mono;
  *
  * <p>This interface provides a unified API for storing and searching vector embeddings.
  * Implementations can use in-memory storage, Qdrant, ChromaDB, or other vector databases.
+ *
+ * <p>The store directly stores Document objects (including metadata/payload), not just vectors.
+ * This allows retrieval of complete documents with their metadata.
+ *
+ * <p>Key features:
+ * <ul>
+ *   <li>Batch document addition for efficiency
+ *   <li>Vector similarity search with optional score threshold
+ *   <li>Document retrieval with embeddings and metadata
+ * </ul>
  */
 public interface VDBStoreBase {
 
     /**
-     * Adds a vector to the store.
+     * Adds multiple documents to the store.
      *
-     * @param id the document ID
-     * @param embedding the embedding vector
-     * @return a Mono that emits the document ID when the operation completes
+     * <p>All documents must have embedding vectors set. The store will persist both
+     * the vectors and the document metadata/payloads.
+     *
+     * <p>This method supports batch operations for efficiency. Implementations should
+     * handle batch insertion optimally.
+     *
+     * @param documents the list of documents to store (all must have embeddings set)
+     * @return a Mono that completes when all documents are stored
      */
-    Mono<String> add(String id, double[] embedding);
+    Mono<Void> add(List<Document> documents);
 
     /**
-     * Searches for similar vectors.
+     * Searches for similar documents.
+     *
+     * <p>This method performs vector similarity search and returns the most similar documents.
+     * Results include the document metadata and similarity scores. Optionally, embeddings
+     * may also be included in the results (implementation-dependent).
      *
      * @param queryEmbedding the query embedding vector
-     * @param topK the maximum number of results to return
-     * @return a Mono that emits a list of VectorSearchResult objects, sorted by similarity
+     * @param limit the maximum number of results to return
+     * @param scoreThreshold optional minimum similarity score threshold (null for no filtering)
+     * @return a Mono that emits a list of Document objects with scores set, sorted by similarity
+     *     (descending)
      */
-    Mono<List<VectorSearchResult>> search(double[] queryEmbedding, int topK);
+    Mono<List<Document>> search(double[] queryEmbedding, int limit, Double scoreThreshold);
 
     /**
      * Gets the underlying client (optional).
@@ -58,12 +79,18 @@ public interface VDBStoreBase {
     }
 
     /**
-     * Deletes a vector from the store (optional).
+     * Deletes a document from the store (optional).
      *
-     * @param id the document ID to delete
+     * <p>Default implementation throws UnsupportedOperationException. Vector stores
+     * that support deletion should override this method.
+     *
+     * @param id the document ID (UUID string) to delete
      * @return a Mono that emits true if the deletion was successful, false otherwise
+     * @throws UnsupportedOperationException if deletion is not supported by the implementation
      */
     default Mono<Boolean> delete(String id) {
-        return Mono.just(true);
+        return Mono.error(
+                new UnsupportedOperationException(
+                        "Delete is not implemented for this vector store"));
     }
 }

@@ -26,7 +26,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import reactor.core.publisher.Mono;
 
@@ -175,7 +174,8 @@ public class PDFReader implements Reader {
         List<Document> documents = new ArrayList<>();
 
         for (int i = 0; i < chunks.size(); i++) {
-            Map<String, Object> content = Map.of("text", chunks.get(i));
+            io.agentscope.core.message.TextBlock content =
+                    io.agentscope.core.message.TextBlock.builder().text(chunks.get(i)).build();
             DocumentMetadata metadata = new DocumentMetadata(content, docId, i, chunks.size());
             documents.add(new Document(metadata));
         }

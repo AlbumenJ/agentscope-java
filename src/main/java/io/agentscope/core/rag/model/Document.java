@@ -15,17 +15,26 @@
  */
 package io.agentscope.core.rag.model;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Document class representing a document chunk in the RAG system.
  *
  * <p>This is the core data structure for RAG operations. Each document contains
  * metadata, an optional embedding vector, and an optional similarity score.
+ *
+ * <p>The document ID is automatically generated as a deterministic UUID based on
+ * the document metadata (doc_id, chunk_id, and content), ensuring consistent IDs
+ * for the same content across different runs.
  */
 public class Document {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final String id;
     private final DocumentMetadata metadata;
@@ -35,7 +44,8 @@ public class Document {
     /**
      * Creates a new Document instance.
      *
-     * <p>The document ID is automatically generated based on the content hash of the metadata.
+     * <p>The document ID is automatically generated as a deterministic UUID based on
+     * the metadata (doc_id, chunk_id, and content).
      *
      * @param metadata the document metadata
      */
@@ -50,7 +60,7 @@ public class Document {
     /**
      * Gets the document ID.
      *
-     * @return the document ID
+     * @return the document ID (UUID string)
      */
     public String getId() {
         return id;
@@ -102,41 +112,33 @@ public class Document {
     }
 
     /**
-     * Generates a document ID based on the content hash.
+     * Generates a deterministic document ID based on metadata.
      *
-     * <p>Uses SHA-256 hash of the document text content to generate a unique ID.
+     * <p>This method creates a UUID v3 (name-based with MD5) from a JSON representation
+     * of the document's key fields (doc_id, chunk_id, content). This ensures that the
+     * same document content always generates the same ID, which is compatible with the
+     * Python implementation's _map_text_to_uuid function.
      *
      * @param metadata the document metadata
-     * @return the generated document ID
+     * @return a deterministic UUID string
      */
-    private String generateDocumentId(DocumentMetadata metadata) {
+    private static String generateDocumentId(DocumentMetadata metadata) {
         try {
-            String contentText = metadata.getContentText();
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(contentText.getBytes(StandardCharsets.UTF_8));
-            return bytesToHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            // SHA-256 should always be available
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
-    }
+            // Create a map with doc_id, chunk_id, and content (matching Python implementation)
+            Map<String, Object> keyMap = new LinkedHashMap<>();
+            keyMap.put("doc_id", metadata.getDocId());
+            keyMap.put("chunk_id", metadata.getChunkId());
+            keyMap.put("content", metadata.getContent());
 
-    /**
-     * Converts a byte array to a hexadecimal string.
-     *
-     * @param bytes the byte array
-     * @return the hexadecimal string
-     */
-    private String bytesToHex(byte[] bytes) {
-        StringBuilder hexString = new StringBuilder(2 * bytes.length);
-        for (byte b : bytes) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) {
-                hexString.append('0');
-            }
-            hexString.append(hex);
+            // Serialize to JSON (ensure_ascii=False in Python, so we use default UTF-8)
+            String jsonKey = OBJECT_MAPPER.writeValueAsString(keyMap);
+
+            // Generate UUID v3 (name-based with MD5) from the JSON string
+            return UUID.nameUUIDFromBytes(jsonKey.getBytes(StandardCharsets.UTF_8)).toString();
+        } catch (JsonProcessingException e) {
+            // Fallback: use a random UUID if JSON serialization fails
+            throw new RuntimeException("Failed to generate document ID", e);
         }
-        return hexString.toString();
     }
 
     @Override

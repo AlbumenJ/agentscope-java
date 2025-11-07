@@ -18,7 +18,9 @@ package io.agentscope.core.rag.model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Map;
+import io.agentscope.core.message.ImageBlock;
+import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.message.URLSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -33,7 +35,7 @@ class DocumentMetadataTest {
     @Test
     @DisplayName("Should create DocumentMetadata with valid parameters")
     void testCreateMetadata() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         String docId = "doc-1";
         int chunkId = 0;
         int totalChunks = 1;
@@ -57,7 +59,7 @@ class DocumentMetadataTest {
     @Test
     @DisplayName("Should throw exception when docId is null")
     void testCreateMetadataNullDocId() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         assertThrows(
                 IllegalArgumentException.class, () -> new DocumentMetadata(content, null, 0, 1));
     }
@@ -65,7 +67,7 @@ class DocumentMetadataTest {
     @Test
     @DisplayName("Should throw exception when chunkId is negative")
     void testCreateMetadataNegativeChunkId() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new DocumentMetadata(content, "doc-1", -1, 1));
@@ -74,7 +76,7 @@ class DocumentMetadataTest {
     @Test
     @DisplayName("Should throw exception when totalChunks is zero or negative")
     void testCreateMetadataInvalidTotalChunks() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         assertThrows(
                 IllegalArgumentException.class, () -> new DocumentMetadata(content, "doc-1", 0, 0));
         assertThrows(
@@ -85,7 +87,7 @@ class DocumentMetadataTest {
     @Test
     @DisplayName("Should throw exception when chunkId >= totalChunks")
     void testCreateMetadataChunkIdOutOfRange() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         assertThrows(
                 IllegalArgumentException.class, () -> new DocumentMetadata(content, "doc-1", 1, 1));
         assertThrows(
@@ -93,18 +95,21 @@ class DocumentMetadataTest {
     }
 
     @Test
-    @DisplayName("Should return empty string when text content is missing")
-    void testGetContentTextMissing() {
-        Map<String, Object> content = Map.of("type", "image");
+    @DisplayName("Should return text from ImageBlock toString when image content")
+    void testGetContentTextFromImage() {
+        URLSource source = URLSource.builder().url("https://example.com/image.jpg").build();
+        ImageBlock content = ImageBlock.builder().source(source).build();
         DocumentMetadata metadata = new DocumentMetadata(content, "doc-1", 0, 1);
 
-        assertEquals("", metadata.getContentText());
+        // ImageBlock.toString() returns the string representation
+        String contentText = metadata.getContentText();
+        assertEquals(content.toString(), contentText);
     }
 
     @Test
     @DisplayName("Should handle multiple chunks correctly")
     void testMultipleChunks() {
-        Map<String, Object> content = Map.of("text", "Chunk 1");
+        TextBlock content = TextBlock.builder().text("Chunk 1").build();
         DocumentMetadata metadata = new DocumentMetadata(content, "doc-1", 0, 3);
 
         assertEquals(0, metadata.getChunkId());

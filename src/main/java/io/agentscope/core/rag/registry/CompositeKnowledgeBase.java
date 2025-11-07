@@ -139,9 +139,10 @@ public class CompositeKnowledgeBase implements KnowledgeBase {
         for (List<Document> results : allResults) {
             if (results != null) {
                 for (Document doc : results) {
-                    if (doc != null && doc.getId() != null) {
-                        if (!seenIds.contains(doc.getId())) {
-                            seenIds.add(doc.getId());
+                    if (doc != null) {
+                        String docId = doc.getId();
+                        if (!seenIds.contains(docId)) {
+                            seenIds.add(docId);
                             merged.add(doc);
                         }
                     }

@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -198,8 +197,9 @@ class KnowledgeUtilsTest {
      * Creates a test document.
      */
     private Document createDocument(String docId, String content, Double score) {
-        Map<String, Object> contentMap = Map.of("text", content);
-        DocumentMetadata metadata = new DocumentMetadata(contentMap, docId, 0, 1);
+        io.agentscope.core.message.TextBlock textBlock =
+                io.agentscope.core.message.TextBlock.builder().text(content).build();
+        DocumentMetadata metadata = new DocumentMetadata(textBlock, docId, 0, 1);
         Document doc = new Document(metadata);
         if (score != null) {
             doc.setScore(score);

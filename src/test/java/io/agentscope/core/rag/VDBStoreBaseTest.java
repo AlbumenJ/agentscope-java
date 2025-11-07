@@ -18,7 +18,10 @@ package io.agentscope.core.rag;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.agentscope.core.rag.model.VectorSearchResult;
+import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.rag.model.Document;
+import io.agentscope.core.rag.model.DocumentMetadata;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -40,13 +43,14 @@ class VDBStoreBaseTest {
      */
     static class TestVDBStore implements VDBStoreBase {
         @Override
-        public Mono<String> add(String id, double[] embedding) {
-            return Mono.just(id);
+        public Mono<Void> add(List<Document> documents) {
+            return Mono.empty();
         }
 
         @Override
-        public Mono<List<VectorSearchResult>> search(double[] queryEmbedding, int topK) {
-            return Mono.just(List.of());
+        public Mono<List<Document>> search(
+                double[] queryEmbedding, int limit, Double scoreThreshold) {
+            return Mono.just(new ArrayList<>());
         }
     }
 
@@ -59,24 +63,25 @@ class VDBStoreBaseTest {
     }
 
     @Test
-    @DisplayName("Should return true for delete by default")
+    @DisplayName("Should throw UnsupportedOperationException for delete by default")
     void testDeleteDefault() {
         VDBStoreBase store = new TestVDBStore();
 
         StepVerifier.create(store.delete("test-id"))
-                .assertNext(result -> assertTrue(result))
-                .verifyComplete();
+                .expectError(UnsupportedOperationException.class)
+                .verify();
     }
 
     @Test
-    @DisplayName("Should add vector and return id")
+    @DisplayName("Should add documents")
     void testAdd() {
         VDBStoreBase store = new TestVDBStore();
-        double[] embedding = new double[] {0.1, 0.2, 0.3};
+        TextBlock content = TextBlock.builder().text("Test content").build();
+        DocumentMetadata metadata = new DocumentMetadata(content, "doc-1", 0, 1);
+        Document doc = new Document(metadata);
+        doc.setEmbedding(new double[] {0.1, 0.2, 0.3});
 
-        StepVerifier.create(store.add("test-id", embedding))
-                .assertNext(id -> assertEquals("test-id", id))
-                .verifyComplete();
+        StepVerifier.create(store.add(List.of(doc))).verifyComplete();
     }
 
     @Test
@@ -85,11 +90,23 @@ class VDBStoreBaseTest {
         VDBStoreBase store = new TestVDBStore();
         double[] queryEmbedding = new double[] {0.1, 0.2, 0.3};
 
-        StepVerifier.create(store.search(queryEmbedding, 10))
+        StepVerifier.create(store.search(queryEmbedding, 10, null))
                 .assertNext(
                         results -> {
                             assertTrue(results instanceof List);
+                            assertEquals(0, results.size());
                         })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should search vectors with score threshold")
+    void testSearchWithScoreThreshold() {
+        VDBStoreBase store = new TestVDBStore();
+        double[] queryEmbedding = new double[] {0.1, 0.2, 0.3};
+
+        StepVerifier.create(store.search(queryEmbedding, 10, 0.5))
+                .assertNext(results -> assertTrue(results.isEmpty()))
                 .verifyComplete();
     }
 }

@@ -21,7 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.agentscope.core.rag.model.VectorSearchResult;
+import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.rag.model.Document;
+import io.agentscope.core.rag.model.DocumentMetadata;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -67,32 +69,39 @@ class InMemoryStoreTest {
     }
 
     @Test
-    @DisplayName("Should add vector to store")
+    @DisplayName("Should add documents to store")
     void testAdd() {
-        String id = "doc-1";
-        double[] embedding = {1.0, 2.0, 3.0};
+        Document doc = createDocument("doc-1", "Test content", new double[] {1.0, 2.0, 3.0});
 
-        StepVerifier.create(store.add(id, embedding))
-                .assertNext(returnedId -> assertEquals(id, returnedId))
-                .verifyComplete();
+        StepVerifier.create(store.add(List.of(doc))).verifyComplete();
 
         assertEquals(1, store.size());
     }
 
     @Test
-    @DisplayName("Should throw error when adding null ID")
-    void testAddNullId() {
-        double[] embedding = {1.0, 2.0, 3.0};
+    @DisplayName("Should throw error when adding null document list")
+    void testAddNullList() {
+        StepVerifier.create(store.add(null)).expectError(IllegalArgumentException.class).verify();
+    }
 
-        StepVerifier.create(store.add(null, embedding))
+    @Test
+    @DisplayName("Should throw error when adding null document")
+    void testAddNullDocument() {
+        // Create a list containing null to trigger validation
+        java.util.List<Document> listWithNull = new java.util.ArrayList<>();
+        listWithNull.add(null);
+
+        StepVerifier.create(store.add(listWithNull))
                 .expectError(IllegalArgumentException.class)
                 .verify();
     }
 
     @Test
-    @DisplayName("Should throw error when adding null embedding")
-    void testAddNullEmbedding() {
-        StepVerifier.create(store.add("doc-1", null))
+    @DisplayName("Should throw error when adding document without embedding")
+    void testAddNoEmbedding() {
+        Document doc = createDocument("doc-1", "Test", null);
+
+        StepVerifier.create(store.add(List.of(doc)))
                 .expectError(IllegalArgumentException.class)
                 .verify();
     }
@@ -100,47 +109,66 @@ class InMemoryStoreTest {
     @Test
     @DisplayName("Should throw error when embedding dimension mismatch")
     void testAddDimensionMismatch() {
-        double[] embedding = {1.0, 2.0}; // Wrong dimension
+        Document doc = createDocument("doc-1", "Test", new double[] {1.0, 2.0}); // Wrong dimension
 
-        StepVerifier.create(store.add("doc-1", embedding))
+        StepVerifier.create(store.add(List.of(doc)))
                 .expectError(io.agentscope.core.rag.model.VectorStoreException.class)
                 .verify();
     }
 
     @Test
-    @DisplayName("Should replace existing vector with same ID")
+    @DisplayName("Should replace existing document with same UUID")
     void testAddReplace() {
-        String id = "doc-1";
-        double[] embedding1 = {1.0, 2.0, 3.0};
-        double[] embedding2 = {4.0, 5.0, 6.0};
+        // Documents with same docId and content will have same UUID
+        Document doc1 = createDocument("doc-1", "Same content", new double[] {1.0, 2.0, 3.0});
+        Document doc2 = createDocument("doc-1", "Same content", new double[] {4.0, 5.0, 6.0});
 
-        store.add(id, embedding1).block();
-        store.add(id, embedding2).block();
+        store.add(List.of(doc1)).block();
+        store.add(List.of(doc2)).block();
 
+        // Should have same UUID and thus replace
+        assertEquals(doc1.getId(), doc2.getId());
         assertEquals(1, store.size());
+    }
+
+    @Test
+    @DisplayName("Should add multiple documents in batch")
+    void testAddBatch() {
+        Document doc1 = createDocument("doc-1", "Content 1", new double[] {1.0, 2.0, 3.0});
+        Document doc2 = createDocument("doc-2", "Content 2", new double[] {4.0, 5.0, 6.0});
+
+        StepVerifier.create(store.add(List.of(doc1, doc2))).verifyComplete();
+
+        assertEquals(2, store.size());
+    }
+
+    @Test
+    @DisplayName("Should handle empty document list")
+    void testAddEmptyList() {
+        StepVerifier.create(store.add(List.of())).verifyComplete();
+
+        assertEquals(0, store.size());
     }
 
     @Test
     @DisplayName("Should search for similar vectors")
     void testSearch() {
-        // Add some vectors
-        double[] v1 = {1.0, 0.0, 0.0};
-        double[] v2 = {0.0, 1.0, 0.0};
-        double[] v3 = {0.0, 0.0, 1.0};
+        // Add some documents with different embeddings
+        Document doc1 = createDocument("doc-1", "Content 1", new double[] {1.0, 0.0, 0.0});
+        Document doc2 = createDocument("doc-2", "Content 2", new double[] {0.0, 1.0, 0.0});
+        Document doc3 = createDocument("doc-3", "Content 3", new double[] {0.0, 0.0, 1.0});
 
-        store.add("doc-1", v1).block();
-        store.add("doc-2", v2).block();
-        store.add("doc-3", v3).block();
+        store.add(List.of(doc1, doc2, doc3)).block();
 
-        // Search for vector similar to v1
+        // Search for vector similar to doc1's embedding
         double[] query = {1.0, 0.0, 0.0};
 
-        StepVerifier.create(store.search(query, 2))
+        StepVerifier.create(store.search(query, 2, null))
                 .assertNext(
                         results -> {
                             assertEquals(2, results.size());
                             // First result should be doc-1 (identical, similarity = 1.0)
-                            assertEquals("doc-1", results.get(0).getId());
+                            assertEquals(doc1.getId(), results.get(0).getId());
                             assertEquals(1.0, results.get(0).getScore(), 1e-9);
                         })
                 .verifyComplete();
@@ -151,7 +179,7 @@ class InMemoryStoreTest {
     void testSearchEmptyStore() {
         double[] query = {1.0, 2.0, 3.0};
 
-        StepVerifier.create(store.search(query, 5))
+        StepVerifier.create(store.search(query, 5, null))
                 .assertNext(results -> assertTrue(results.isEmpty()))
                 .verifyComplete();
     }
@@ -159,15 +187,16 @@ class InMemoryStoreTest {
     @Test
     @DisplayName("Should return top K results")
     void testSearchTopK() {
-        // Add 5 vectors
+        // Add 5 documents
         for (int i = 0; i < 5; i++) {
-            double[] embedding = {(double) i, 0.0, 0.0};
-            store.add("doc-" + i, embedding).block();
+            Document doc =
+                    createDocument("doc-" + i, "Content " + i, new double[] {(double) i, 0.0, 0.0});
+            store.add(List.of(doc)).block();
         }
 
         double[] query = {0.0, 0.0, 0.0};
 
-        StepVerifier.create(store.search(query, 3))
+        StepVerifier.create(store.search(query, 3, null))
                 .assertNext(results -> assertEquals(3, results.size()))
                 .verifyComplete();
     }
@@ -175,17 +204,18 @@ class InMemoryStoreTest {
     @Test
     @DisplayName("Should return results sorted by similarity")
     void testSearchSorted() {
-        double[] v1 = {1.0, 0.0, 0.0}; // Most similar to query
-        double[] v2 = {0.5, 0.5, 0.0}; // Less similar
-        double[] v3 = {0.0, 1.0, 0.0}; // Least similar
+        Document doc1 =
+                createDocument("doc-1", "Content 1", new double[] {1.0, 0.0, 0.0}); // Most similar
+        Document doc2 =
+                createDocument("doc-2", "Content 2", new double[] {0.5, 0.5, 0.0}); // Less similar
+        Document doc3 =
+                createDocument("doc-3", "Content 3", new double[] {0.0, 1.0, 0.0}); // Least similar
 
-        store.add("doc-1", v1).block();
-        store.add("doc-2", v2).block();
-        store.add("doc-3", v3).block();
+        store.add(List.of(doc1, doc2, doc3)).block();
 
         double[] query = {1.0, 0.0, 0.0};
 
-        StepVerifier.create(store.search(query, 3))
+        StepVerifier.create(store.search(query, 3, null))
                 .assertNext(
                         results -> {
                             assertEquals(3, results.size());
@@ -197,37 +227,58 @@ class InMemoryStoreTest {
     }
 
     @Test
+    @DisplayName("Should filter by score threshold")
+    void testSearchWithScoreThreshold() {
+        Document doc1 = createDocument("doc-1", "Content 1", new double[] {1.0, 0.0, 0.0});
+        Document doc2 = createDocument("doc-2", "Content 2", new double[] {0.5, 0.5, 0.0});
+        Document doc3 = createDocument("doc-3", "Content 3", new double[] {0.0, 1.0, 0.0});
+
+        store.add(List.of(doc1, doc2, doc3)).block();
+
+        double[] query = {1.0, 0.0, 0.0};
+
+        // Set high threshold to filter out less similar documents
+        StepVerifier.create(store.search(query, 10, 0.9))
+                .assertNext(
+                        results -> {
+                            // Only doc1 should pass the threshold (similarity = 1.0)
+                            assertEquals(1, results.size());
+                            assertEquals(doc1.getId(), results.get(0).getId());
+                        })
+                .verifyComplete();
+    }
+
+    @Test
     @DisplayName("Should throw error when searching with null query")
     void testSearchNullQuery() {
-        StepVerifier.create(store.search(null, 5))
+        StepVerifier.create(store.search(null, 5, null))
                 .expectError(IllegalArgumentException.class)
                 .verify();
     }
 
     @Test
-    @DisplayName("Should throw error when searching with invalid topK")
-    void testSearchInvalidTopK() {
+    @DisplayName("Should throw error when searching with invalid limit")
+    void testSearchInvalidLimit() {
         double[] query = {1.0, 2.0, 3.0};
 
-        StepVerifier.create(store.search(query, 0))
+        StepVerifier.create(store.search(query, 0, null))
                 .expectError(IllegalArgumentException.class)
                 .verify();
 
-        StepVerifier.create(store.search(query, -1))
+        StepVerifier.create(store.search(query, -1, null))
                 .expectError(IllegalArgumentException.class)
                 .verify();
     }
 
     @Test
-    @DisplayName("Should delete vector from store")
+    @DisplayName("Should delete document from store")
     void testDelete() {
-        String id = "doc-1";
-        double[] embedding = {1.0, 2.0, 3.0};
+        Document doc = createDocument("doc-1", "Test content", new double[] {1.0, 2.0, 3.0});
 
-        store.add(id, embedding).block();
+        store.add(List.of(doc)).block();
         assertEquals(1, store.size());
 
-        StepVerifier.create(store.delete(id))
+        StepVerifier.create(store.delete(doc.getId()))
                 .assertNext(deleted -> assertTrue(deleted))
                 .verifyComplete();
 
@@ -235,9 +286,9 @@ class InMemoryStoreTest {
     }
 
     @Test
-    @DisplayName("Should return false when deleting non-existent vector")
+    @DisplayName("Should return false when deleting non-existent document")
     void testDeleteNonExistent() {
-        StepVerifier.create(store.delete("non-existent"))
+        StepVerifier.create(store.delete("non-existent-uuid"))
                 .assertNext(deleted -> assertFalse(deleted))
                 .verifyComplete();
     }
@@ -251,10 +302,12 @@ class InMemoryStoreTest {
     }
 
     @Test
-    @DisplayName("Should clear all vectors")
+    @DisplayName("Should clear all documents")
     void testClear() {
-        store.add("doc-1", new double[] {1.0, 2.0, 3.0}).block();
-        store.add("doc-2", new double[] {4.0, 5.0, 6.0}).block();
+        Document doc1 = createDocument("doc-1", "Content 1", new double[] {1.0, 2.0, 3.0});
+        Document doc2 = createDocument("doc-2", "Content 2", new double[] {4.0, 5.0, 6.0});
+
+        store.add(List.of(doc1, doc2)).block();
 
         assertEquals(2, store.size());
 
@@ -268,7 +321,7 @@ class InMemoryStoreTest {
     @DisplayName("Should maintain thread safety")
     void testThreadSafety() throws InterruptedException {
         int numThreads = 10;
-        int vectorsPerThread = 10;
+        int docsPerThread = 10;
         Thread[] threads = new Thread[numThreads];
 
         // Concurrent adds
@@ -277,10 +330,16 @@ class InMemoryStoreTest {
             threads[i] =
                     new Thread(
                             () -> {
-                                for (int j = 0; j < vectorsPerThread; j++) {
-                                    String id = "doc-" + threadId + "-" + j;
-                                    double[] embedding = {(double) threadId, (double) j, 0.0};
-                                    store.add(id, embedding).block();
+                                for (int j = 0; j < docsPerThread; j++) {
+                                    String docId = "doc-" + threadId + "-" + j;
+                                    Document doc =
+                                            createDocument(
+                                                    docId,
+                                                    "Content " + threadId + "-" + j,
+                                                    new double[] {
+                                                        (double) threadId, (double) j, 0.0
+                                                    });
+                                    store.add(List.of(doc)).block();
                                 }
                             });
             threads[i].start();
@@ -291,28 +350,41 @@ class InMemoryStoreTest {
             thread.join();
         }
 
-        assertEquals(numThreads * vectorsPerThread, store.size());
+        assertEquals(numThreads * docsPerThread, store.size());
     }
 
     @Test
     @DisplayName("Should not modify original embedding array")
     void testImmutableEmbedding() {
-        String id = "doc-1";
         double[] original = {1.0, 2.0, 3.0};
+        Document doc = createDocument("doc-1", "Test", original);
 
-        store.add(id, original).block();
+        store.add(List.of(doc)).block();
 
         // Modify original array
         original[0] = 999.0;
 
         // Search should still use the original values (defensive copy was made)
         double[] query = {1.0, 2.0, 3.0};
-        List<VectorSearchResult> results = store.search(query, 1).block();
+        List<Document> results = store.search(query, 1, null).block();
 
         assertNotNull(results);
         assertEquals(1, results.size());
         // The stored vector should not be affected by the modification
         // We verify this by checking the search result is still similar to the original query
         assertTrue(results.get(0).getScore() > 0.9);
+    }
+
+    /**
+     * Helper method to create a test document.
+     */
+    private Document createDocument(String docId, String content, double[] embedding) {
+        TextBlock textBlock = TextBlock.builder().text(content).build();
+        DocumentMetadata metadata = new DocumentMetadata(textBlock, docId, 0, 1);
+        Document doc = new Document(metadata);
+        if (embedding != null) {
+            doc.setEmbedding(embedding);
+        }
+        return doc;
     }
 }

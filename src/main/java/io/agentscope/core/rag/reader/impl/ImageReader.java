@@ -15,14 +15,14 @@
  */
 package io.agentscope.core.rag.reader.impl;
 
+import io.agentscope.core.message.ImageBlock;
+import io.agentscope.core.message.URLSource;
 import io.agentscope.core.rag.Reader;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
 import io.agentscope.core.rag.model.ReaderException;
 import io.agentscope.core.rag.model.ReaderInput;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import reactor.core.publisher.Mono;
 
@@ -92,29 +92,22 @@ public class ImageReader implements Reader {
     private List<Document> loadImageDocument(String imagePath) {
         String docId = UUID.randomUUID().toString();
 
-        Map<String, Object> content = new HashMap<>();
-        content.put("type", "image");
-
-        // Determine if it's a URL or local file path
-        Map<String, Object> source = new HashMap<>();
+        // Create ImageBlock with URLSource
+        String url;
         if (isUrl(imagePath)) {
-            source.put("type", "url");
-            source.put("url", imagePath);
+            url = imagePath;
         } else {
-            source.put("type", "file");
-            source.put("path", imagePath);
+            // For local files, use file:// protocol
+            url = imagePath.startsWith("file://") ? imagePath : "file://" + imagePath;
         }
-        content.put("source", source);
+
+        URLSource source = URLSource.builder().url(url).build();
+        ImageBlock content = ImageBlock.builder().source(source).build();
 
         // If OCR is enabled, extract text from image
         // Note: Actual OCR implementation would require additional dependencies
-        // This is a placeholder for future OCR integration
-        if (enableOCR) {
-            String extractedText = extractTextFromImage(imagePath);
-            if (extractedText != null && !extractedText.isEmpty()) {
-                content.put("text", extractedText);
-            }
-        }
+        // For now, we only store the image content
+        // Future: Could create a composite ContentBlock or add OCR text as separate field
 
         DocumentMetadata metadata = new DocumentMetadata(content, docId, 0, 1);
         return List.of(new Document(metadata));

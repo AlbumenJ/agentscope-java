@@ -16,7 +16,7 @@
 package io.agentscope.core.rag.store.impl;
 
 import io.agentscope.core.rag.VDBStoreBase;
-import io.agentscope.core.rag.model.VectorSearchResult;
+import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.VectorStoreException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,13 +45,13 @@ import reactor.core.publisher.Mono;
  *
  * <p><b>Exception Handling:</b>
  * <ul>
- *   <li>{@link IllegalArgumentException} - for invalid input parameters (null IDs, null embeddings, invalid topK)
+ *   <li>{@link IllegalArgumentException} - for invalid input parameters (null documents, null embeddings, invalid limit)
  *   <li>{@link VectorStoreException} - for vector-specific errors (dimension mismatch)
  * </ul>
  */
 public class InMemoryStore implements VDBStoreBase {
 
-    private final Map<String, double[]> vectors;
+    private final Map<String, Document> documents;
     private final int dimensions;
 
     /**
@@ -65,7 +65,7 @@ public class InMemoryStore implements VDBStoreBase {
             throw new IllegalArgumentException("Dimensions must be positive");
         }
         this.dimensions = dimensions;
-        this.vectors = new ConcurrentHashMap<>();
+        this.documents = new ConcurrentHashMap<>();
     }
 
     /**
@@ -79,58 +79,83 @@ public class InMemoryStore implements VDBStoreBase {
     }
 
     @Override
-    public Mono<String> add(final String id, final double[] embedding) {
-        if (id == null) {
-            return Mono.error(new IllegalArgumentException("ID cannot be null"));
+    public Mono<Void> add(final List<Document> documentList) {
+        if (documentList == null) {
+            return Mono.error(new IllegalArgumentException("Document list cannot be null"));
         }
-
-        try {
-            validateDimensions(embedding, "Embedding");
-        } catch (Exception e) {
-            return Mono.error(e);
+        if (documentList.isEmpty()) {
+            return Mono.empty();
         }
 
         return Mono.fromCallable(
                 () -> {
-                    // Create a defensive copy to prevent external modification
-                    double[] embeddingCopy = Arrays.copyOf(embedding, embedding.length);
-                    vectors.put(id, embeddingCopy);
-                    return id;
+                    for (Document document : documentList) {
+                        if (document == null) {
+                            throw new IllegalArgumentException("Document cannot be null");
+                        }
+                        if (document.getEmbedding() == null) {
+                            throw new IllegalArgumentException("Document must have embedding set");
+                        }
+
+                        validateDimensions(document.getEmbedding(), "Embedding");
+
+                        // Create a defensive copy of the embedding
+                        double[] embeddingCopy =
+                                Arrays.copyOf(
+                                        document.getEmbedding(), document.getEmbedding().length);
+                        Document docCopy = new Document(document.getMetadata());
+                        docCopy.setEmbedding(embeddingCopy);
+                        documents.put(document.getId(), docCopy);
+                    }
+                    return null;
                 });
     }
 
     @Override
-    public Mono<List<VectorSearchResult>> search(final double[] queryEmbedding, final int topK) {
+    public Mono<List<Document>> search(
+            final double[] queryEmbedding, final int limit, final Double scoreThreshold) {
         try {
             validateDimensions(queryEmbedding, "Query embedding");
         } catch (Exception e) {
             return Mono.error(e);
         }
 
-        if (topK <= 0) {
-            return Mono.error(new IllegalArgumentException("TopK must be positive"));
+        if (limit <= 0) {
+            return Mono.error(new IllegalArgumentException("Limit must be positive"));
         }
 
         return Mono.fromCallable(
                 () -> {
-                    if (vectors.isEmpty()) {
+                    if (documents.isEmpty()) {
                         return new ArrayList<>();
                     }
 
-                    List<VectorSearchResult> results = new ArrayList<>();
+                    List<Document> results = new ArrayList<>();
 
-                    // Calculate similarity for all vectors
-                    for (Map.Entry<String, double[]> entry : vectors.entrySet()) {
+                    // Calculate similarity for all documents
+                    for (Document doc : documents.values()) {
                         double similarity =
                                 DistanceCalculator.cosineSimilarity(
-                                        queryEmbedding, entry.getValue());
-                        results.add(new VectorSearchResult(entry.getKey(), similarity));
+                                        queryEmbedding, doc.getEmbedding());
+
+                        // Apply score threshold if specified
+                        if (scoreThreshold != null && similarity < scoreThreshold) {
+                            continue;
+                        }
+
+                        Document docWithScore = new Document(doc.getMetadata());
+                        docWithScore.setEmbedding(doc.getEmbedding());
+                        docWithScore.setScore(similarity);
+                        results.add(docWithScore);
                     }
 
-                    // Sort by similarity (descending) and take top K
+                    // Sort by similarity (descending) and take top results
                     return results.stream()
-                            .sorted(Comparator.comparing(VectorSearchResult::getScore).reversed())
-                            .limit(topK)
+                            .sorted(
+                                    Comparator.comparing(
+                                            Document::getScore,
+                                            Comparator.nullsLast(Comparator.reverseOrder())))
+                            .limit(limit)
                             .toList();
                 });
     }
@@ -138,12 +163,11 @@ public class InMemoryStore implements VDBStoreBase {
     @Override
     public Mono<Boolean> delete(final String id) {
         if (id == null) {
-            return Mono.error(new IllegalArgumentException("ID cannot be null"));
+            return Mono.error(new IllegalArgumentException("Document ID cannot be null"));
         }
-
         return Mono.fromCallable(
                 () -> {
-                    double[] removed = vectors.remove(id);
+                    Document removed = documents.remove(id);
                     return removed != null;
                 });
     }
@@ -170,14 +194,14 @@ public class InMemoryStore implements VDBStoreBase {
     }
 
     /**
-     * Gets the number of vectors currently stored.
+     * Gets the number of documents currently stored.
      *
      * <p>This method is thread-safe and returns the current snapshot of the store size.
      *
-     * @return the number of stored vectors (always non-negative)
+     * @return the number of stored documents (always non-negative)
      */
     public int size() {
-        return vectors.size();
+        return documents.size();
     }
 
     /**
@@ -185,20 +209,20 @@ public class InMemoryStore implements VDBStoreBase {
      *
      * <p>Equivalent to {@code size() == 0}. This method is thread-safe.
      *
-     * @return true if the store contains no vectors, false otherwise
+     * @return true if the store contains no documents, false otherwise
      */
     public boolean isEmpty() {
-        return vectors.isEmpty();
+        return documents.isEmpty();
     }
 
     /**
-     * Clears all vectors from the store.
+     * Clears all documents from the store.
      *
      * <p>After this operation, {@link #size()} returns 0 and {@link #isEmpty()} returns true.
      * This operation is thread-safe.
      */
     public void clear() {
-        vectors.clear();
+        documents.clear();
     }
 
     /**

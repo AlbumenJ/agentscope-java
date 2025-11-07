@@ -15,6 +15,7 @@
  */
 package io.agentscope.core.rag.reader.impl;
 
+import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.rag.Reader;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
@@ -22,7 +23,6 @@ import io.agentscope.core.rag.model.ReaderException;
 import io.agentscope.core.rag.model.ReaderInput;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import reactor.core.publisher.Mono;
 
@@ -119,7 +119,7 @@ public class TextReader implements Reader {
         List<Document> documents = new ArrayList<>();
 
         for (int i = 0; i < chunks.size(); i++) {
-            Map<String, Object> content = Map.of("text", chunks.get(i));
+            TextBlock content = TextBlock.builder().text(chunks.get(i)).build();
             DocumentMetadata metadata = new DocumentMetadata(content, docId, i, chunks.size());
             documents.add(new Document(metadata));
         }

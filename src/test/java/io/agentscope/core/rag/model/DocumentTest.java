@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Map;
+import io.agentscope.core.message.TextBlock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,7 @@ class DocumentTest {
     @Test
     @DisplayName("Should create Document with metadata")
     void testCreateDocument() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         DocumentMetadata metadata = new DocumentMetadata(content, "doc-1", 0, 1);
 
         Document document = new Document(metadata);
@@ -55,7 +55,7 @@ class DocumentTest {
     @Test
     @DisplayName("Should generate consistent ID for same content")
     void testDocumentIdConsistency() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         DocumentMetadata metadata1 = new DocumentMetadata(content, "doc-1", 0, 1);
         DocumentMetadata metadata2 = new DocumentMetadata(content, "doc-1", 0, 1);
 
@@ -68,8 +68,8 @@ class DocumentTest {
     @Test
     @DisplayName("Should generate different IDs for different content")
     void testDocumentIdUniqueness() {
-        Map<String, Object> content1 = Map.of("text", "Test content 1");
-        Map<String, Object> content2 = Map.of("text", "Test content 2");
+        TextBlock content1 = TextBlock.builder().text("Test content 1").build();
+        TextBlock content2 = TextBlock.builder().text("Test content 2").build();
         DocumentMetadata metadata1 = new DocumentMetadata(content1, "doc-1", 0, 1);
         DocumentMetadata metadata2 = new DocumentMetadata(content2, "doc-1", 0, 1);
 
@@ -77,16 +77,14 @@ class DocumentTest {
         Document doc2 = new Document(metadata2);
 
         // IDs should be different for different content
-        // Note: This test might occasionally fail if hash collision occurs (extremely rare)
-        // In practice, SHA-256 collisions are virtually impossible
-        // Verify that IDs are different
+        // UUIDs are deterministic based on content, so different content = different IDs
         assertEquals(false, doc1.getId().equals(doc2.getId()));
     }
 
     @Test
     @DisplayName("Should set and get embedding")
     void testSetGetEmbedding() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         DocumentMetadata metadata = new DocumentMetadata(content, "doc-1", 0, 1);
         Document document = new Document(metadata);
 
@@ -99,7 +97,7 @@ class DocumentTest {
     @Test
     @DisplayName("Should set and get score")
     void testSetGetScore() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         DocumentMetadata metadata = new DocumentMetadata(content, "doc-1", 0, 1);
         Document document = new Document(metadata);
 
@@ -110,22 +108,24 @@ class DocumentTest {
     }
 
     @Test
-    @DisplayName("Should generate valid SHA-256 hash ID")
+    @DisplayName("Should generate valid UUID ID")
     void testDocumentIdFormat() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         DocumentMetadata metadata = new DocumentMetadata(content, "doc-1", 0, 1);
         Document document = new Document(metadata);
 
-        // SHA-256 produces 64-character hex string
-        assertEquals(64, document.getId().length());
-        // Should only contain hex characters
-        assertEquals(true, document.getId().matches("[0-9a-f]{64}"));
+        // UUID format: 8-4-4-4-12 characters
+        assertNotNull(document.getId());
+        assertEquals(
+                true,
+                document.getId()
+                        .matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"));
     }
 
     @Test
     @DisplayName("Should format toString correctly")
     void testToString() {
-        Map<String, Object> content = Map.of("text", "Test content");
+        TextBlock content = TextBlock.builder().text("Test content").build();
         DocumentMetadata metadata = new DocumentMetadata(content, "doc-1", 0, 1);
         Document document = new Document(metadata);
         document.setScore(0.95);
