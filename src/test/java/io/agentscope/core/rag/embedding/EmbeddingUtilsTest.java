@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import io.agentscope.core.model.ExecutionConfig;
-import io.agentscope.core.rag.EmbeddingException;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;

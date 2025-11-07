@@ -27,13 +27,13 @@ import io.agentscope.core.interruption.InterruptContext;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.rag.EmbeddingModel;
-import io.agentscope.core.rag.KnowledgeBase;
-import io.agentscope.core.rag.knowledge.impl.SimpleKnowledge;
+import io.agentscope.core.rag.embedding.EmbeddingModel;
+import io.agentscope.core.rag.knowledge.Knowledge;
+import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
 import io.agentscope.core.rag.model.RetrieveConfig;
-import io.agentscope.core.rag.store.impl.InMemoryStore;
+import io.agentscope.core.rag.store.InMemoryStore;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +53,7 @@ class GenericRAGHookTest {
 
     private static final int DIMENSIONS = 3;
 
-    private KnowledgeBase knowledgeBase;
+    private Knowledge knowledge;
     private GenericRAGHook hook;
     private AgentBase mockAgent;
 
@@ -61,8 +61,8 @@ class GenericRAGHookTest {
     void setUp() {
         TestMockEmbeddingModel embeddingModel = new TestMockEmbeddingModel(DIMENSIONS);
         InMemoryStore vectorStore = new InMemoryStore(DIMENSIONS);
-        knowledgeBase = new SimpleKnowledge(embeddingModel, vectorStore);
-        hook = new GenericRAGHook(knowledgeBase);
+        knowledge = new SimpleKnowledge(embeddingModel, vectorStore);
+        hook = new GenericRAGHook(knowledge);
         mockAgent =
                 new AgentBase("MockAgent") {
                     @Override
@@ -96,9 +96,9 @@ class GenericRAGHookTest {
     @Test
     @DisplayName("Should create GenericRAGHook with default configuration")
     void testCreateWithDefaults() {
-        GenericRAGHook newHook = new GenericRAGHook(knowledgeBase);
+        GenericRAGHook newHook = new GenericRAGHook(knowledge);
         assertNotNull(newHook);
-        assertEquals(knowledgeBase, newHook.getKnowledgeBase());
+        assertEquals(knowledge, newHook.getKnowledgeBase());
         assertNotNull(newHook.getDefaultConfig());
         assertTrue(newHook.isEnableOnlyForUserQueries());
     }
@@ -107,7 +107,7 @@ class GenericRAGHookTest {
     @DisplayName("Should create GenericRAGHook with custom configuration")
     void testCreateWithCustomConfig() {
         RetrieveConfig config = RetrieveConfig.builder().limit(10).scoreThreshold(0.7).build();
-        GenericRAGHook newHook = new GenericRAGHook(knowledgeBase, config, false);
+        GenericRAGHook newHook = new GenericRAGHook(knowledge, config, false);
         assertNotNull(newHook);
         assertEquals(config, newHook.getDefaultConfig());
         assertTrue(!newHook.isEnableOnlyForUserQueries());
@@ -124,7 +124,7 @@ class GenericRAGHookTest {
     void testCreateNullConfig() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new GenericRAGHook(knowledgeBase, null, true));
+                () -> new GenericRAGHook(knowledge, null, true));
     }
 
     @Test
@@ -138,7 +138,7 @@ class GenericRAGHookTest {
     void testHandlePreReasoningEvent() {
         // Add documents to knowledge base
         Document doc1 = createDocument("doc1", "Machine learning is interesting");
-        knowledgeBase.addDocuments(List.of(doc1)).block();
+        knowledge.addDocuments(List.of(doc1)).block();
 
         // Create user message
         Msg userMsg =
@@ -198,11 +198,11 @@ class GenericRAGHookTest {
     @Test
     @DisplayName("Should process all messages when enableOnlyForUserQueries is false")
     void testProcessAllMessages() {
-        GenericRAGHook hookAll = new GenericRAGHook(knowledgeBase, hook.getDefaultConfig(), false);
+        GenericRAGHook hookAll = new GenericRAGHook(knowledge, hook.getDefaultConfig(), false);
 
         // Add documents
         Document doc = createDocument("doc1", "Test content");
-        knowledgeBase.addDocuments(List.of(doc)).block();
+        knowledge.addDocuments(List.of(doc)).block();
 
         // Create assistant message
         Msg assistantMsg =
@@ -276,7 +276,7 @@ class GenericRAGHookTest {
         TestMockEmbeddingModel errorModel = new TestMockEmbeddingModel(DIMENSIONS);
         errorModel.setShouldThrowError(true);
         InMemoryStore vectorStore = new InMemoryStore(DIMENSIONS);
-        KnowledgeBase errorKB = new SimpleKnowledge(errorModel, vectorStore);
+        Knowledge errorKB = new SimpleKnowledge(errorModel, vectorStore);
         GenericRAGHook errorHook = new GenericRAGHook(errorKB);
 
         Msg userMsg =
@@ -319,7 +319,7 @@ class GenericRAGHookTest {
         doc1.setScore(0.9);
         Document doc2 = createDocument("doc2", "Content 2");
         doc2.setScore(0.8);
-        knowledgeBase.addDocuments(List.of(doc1, doc2)).block();
+        knowledge.addDocuments(List.of(doc1, doc2)).block();
 
         Msg userMsg =
                 Msg.builder()

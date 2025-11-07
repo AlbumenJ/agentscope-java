@@ -26,8 +26,7 @@ import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.ImageBlock;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.model.ExecutionConfig;
-import io.agentscope.core.rag.EmbeddingException;
-import io.agentscope.core.rag.EmbeddingModel;
+
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

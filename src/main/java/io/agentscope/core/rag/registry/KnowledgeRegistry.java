@@ -16,7 +16,7 @@
 package io.agentscope.core.rag.registry;
 
 import io.agentscope.core.ReActAgent;
-import io.agentscope.core.rag.KnowledgeBase;
+import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.hook.GenericRAGHook;
 import io.agentscope.core.rag.tool.KnowledgeRetrievalTools;
 import io.agentscope.core.tool.Toolkit;
@@ -67,29 +67,29 @@ public class KnowledgeRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(KnowledgeRegistry.class);
 
-    private final Map<String, KnowledgeBase> knowledgeBases = new ConcurrentHashMap<>();
+    private final Map<String, Knowledge> knowledgeBases = new ConcurrentHashMap<>();
     private final Map<String, String> knowledgeDescriptions = new ConcurrentHashMap<>();
 
     /**
      * Registers a knowledge base with a name and description.
      *
      * @param name the unique name for the knowledge base
-     * @param knowledgeBase the knowledge base instance
+     * @param knowledge the knowledge base instance
      * @param description a description of the knowledge base
      * @throws IllegalArgumentException if any parameter is null or name is empty
      */
-    public void registerKnowledge(String name, KnowledgeBase knowledgeBase, String description) {
+    public void registerKnowledge(String name, Knowledge knowledge, String description) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Knowledge base name cannot be null or empty");
         }
-        if (knowledgeBase == null) {
+        if (knowledge == null) {
             throw new IllegalArgumentException("Knowledge base cannot be null");
         }
         if (description == null) {
             description = "";
         }
 
-        knowledgeBases.put(name, knowledgeBase);
+        knowledgeBases.put(name, knowledge);
         knowledgeDescriptions.put(name, description);
         log.debug("Registered knowledge base: {}", name);
     }
@@ -98,11 +98,11 @@ public class KnowledgeRegistry {
      * Registers a knowledge base without a description.
      *
      * @param name the unique name for the knowledge base
-     * @param knowledgeBase the knowledge base instance
+     * @param knowledge the knowledge base instance
      * @throws IllegalArgumentException if any parameter is null or name is empty
      */
-    public void registerKnowledge(String name, KnowledgeBase knowledgeBase) {
-        registerKnowledge(name, knowledgeBase, "");
+    public void registerKnowledge(String name, Knowledge knowledge) {
+        registerKnowledge(name, knowledge, "");
     }
 
     /**
@@ -111,7 +111,7 @@ public class KnowledgeRegistry {
      * @param name the knowledge base name
      * @return the knowledge base, or null if not found
      */
-    public KnowledgeBase getKnowledge(String name) {
+    public Knowledge getKnowledge(String name) {
         return knowledgeBases.get(name);
     }
 
@@ -150,8 +150,8 @@ public class KnowledgeRegistry {
      * @param name the knowledge base name to unregister
      * @return the removed knowledge base, or null if not found
      */
-    public KnowledgeBase unregisterKnowledge(String name) {
-        KnowledgeBase removed = knowledgeBases.remove(name);
+    public Knowledge unregisterKnowledge(String name) {
+        Knowledge removed = knowledgeBases.remove(name);
         knowledgeDescriptions.remove(name);
         if (removed != null) {
             log.debug("Unregistered knowledge base: {}", name);
@@ -199,11 +199,11 @@ public class KnowledgeRegistry {
             throw new IllegalArgumentException("Toolkit cannot be null");
         }
 
-        for (Map.Entry<String, KnowledgeBase> entry : knowledgeBases.entrySet()) {
+        for (Map.Entry<String, Knowledge> entry : knowledgeBases.entrySet()) {
             String name = entry.getKey();
-            KnowledgeBase knowledgeBase = entry.getValue();
+            Knowledge knowledge = entry.getValue();
 
-            KnowledgeRetrievalTools tools = new KnowledgeRetrievalTools(knowledgeBase);
+            KnowledgeRetrievalTools tools = new KnowledgeRetrievalTools(knowledge);
             toolkit.registerTool(tools);
             log.debug("Injected knowledge tool for: {}", name);
         }
@@ -226,12 +226,12 @@ public class KnowledgeRegistry {
             throw new IllegalArgumentException("Knowledge name cannot be null or empty");
         }
 
-        KnowledgeBase knowledgeBase = knowledgeBases.get(knowledgeName);
-        if (knowledgeBase == null) {
+        Knowledge knowledge = knowledgeBases.get(knowledgeName);
+        if (knowledge == null) {
             throw new IllegalArgumentException("Knowledge base not found: " + knowledgeName);
         }
 
-        KnowledgeRetrievalTools tools = new KnowledgeRetrievalTools(knowledgeBase);
+        KnowledgeRetrievalTools tools = new KnowledgeRetrievalTools(knowledge);
         toolkit.registerTool(tools);
         log.debug("Injected knowledge tool for: {}", knowledgeName);
     }
@@ -251,12 +251,12 @@ public class KnowledgeRegistry {
             throw new IllegalArgumentException("Knowledge name cannot be null or empty");
         }
 
-        KnowledgeBase knowledgeBase = knowledgeBases.get(knowledgeName);
-        if (knowledgeBase == null) {
+        Knowledge knowledge = knowledgeBases.get(knowledgeName);
+        if (knowledge == null) {
             throw new IllegalArgumentException("Knowledge base not found: " + knowledgeName);
         }
 
-        return new GenericRAGHook(knowledgeBase);
+        return new GenericRAGHook(knowledge);
     }
 
     /**
@@ -274,8 +274,8 @@ public class KnowledgeRegistry {
         }
 
         // Create a composite knowledge base with all registered knowledge bases
-        CompositeKnowledgeBase composite =
-                new CompositeKnowledgeBase(new ArrayList<>(knowledgeBases.values()));
+        CompositeKnowledge composite =
+                new CompositeKnowledge(new ArrayList<>(knowledgeBases.values()));
         return new GenericRAGHook(composite);
     }
 

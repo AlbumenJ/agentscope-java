@@ -16,7 +16,7 @@
 package io.agentscope.core.rag.embedding;
 
 import io.agentscope.core.model.ExecutionConfig;
-import io.agentscope.core.rag.EmbeddingException;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Predicate;

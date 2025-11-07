@@ -23,10 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.agentscope.core.ReActAgent;
-import io.agentscope.core.rag.KnowledgeBase;
+import io.agentscope.core.rag.embedding.EmbeddingModel;
+import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.hook.GenericRAGHook;
-import io.agentscope.core.rag.knowledge.impl.SimpleKnowledge;
-import io.agentscope.core.rag.store.impl.InMemoryStore;
+import io.agentscope.core.rag.knowledge.SimpleKnowledge;
+import io.agentscope.core.rag.store.InMemoryStore;
 import io.agentscope.core.tool.Toolkit;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,8 +48,8 @@ class KnowledgeRegistryTest {
     private static final int DIMENSIONS = 3;
 
     private KnowledgeRegistry registry;
-    private KnowledgeBase kb1;
-    private KnowledgeBase kb2;
+    private Knowledge kb1;
+    private Knowledge kb2;
 
     @BeforeEach
     void setUp() {
@@ -113,7 +114,7 @@ class KnowledgeRegistryTest {
     void testGetKnowledge() {
         registry.registerKnowledge("kb1", kb1, "Description");
 
-        KnowledgeBase retrieved = registry.getKnowledge("kb1");
+        Knowledge retrieved = registry.getKnowledge("kb1");
         assertEquals(kb1, retrieved);
     }
 
@@ -141,7 +142,7 @@ class KnowledgeRegistryTest {
         registry.registerKnowledge("kb1", kb1, "Description");
         assertEquals(1, registry.size());
 
-        KnowledgeBase removed = registry.unregisterKnowledge("kb1");
+        Knowledge removed = registry.unregisterKnowledge("kb1");
         assertEquals(kb1, removed);
         assertEquals(0, registry.size());
         assertFalse(registry.hasKnowledge("kb1"));
@@ -304,7 +305,7 @@ class KnowledgeRegistryTest {
     /**
      * Mock EmbeddingModel for testing.
      */
-    private static class TestMockEmbeddingModel implements io.agentscope.core.rag.EmbeddingModel {
+    private static class TestMockEmbeddingModel implements EmbeddingModel {
         private final int dimensions;
         private final Map<String, double[]> embeddings = new HashMap<>();
 

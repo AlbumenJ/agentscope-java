@@ -20,12 +20,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.agentscope.core.rag.EmbeddingModel;
-import io.agentscope.core.rag.KnowledgeBase;
-import io.agentscope.core.rag.knowledge.impl.SimpleKnowledge;
+import io.agentscope.core.rag.embedding.EmbeddingModel;
+import io.agentscope.core.rag.knowledge.Knowledge;
+import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
-import io.agentscope.core.rag.store.impl.InMemoryStore;
+import io.agentscope.core.rag.store.InMemoryStore;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.core.tool.test.ToolTestUtils;
@@ -48,7 +48,7 @@ class KnowledgeRetrievalToolsTest {
 
     private static final int DIMENSIONS = 3;
 
-    private KnowledgeBase knowledgeBase;
+    private Knowledge knowledge;
     private KnowledgeRetrievalTools tools;
     private Toolkit toolkit;
 
@@ -56,17 +56,17 @@ class KnowledgeRetrievalToolsTest {
     void setUp() {
         TestMockEmbeddingModel embeddingModel = new TestMockEmbeddingModel(DIMENSIONS);
         InMemoryStore vectorStore = new InMemoryStore(DIMENSIONS);
-        knowledgeBase = new SimpleKnowledge(embeddingModel, vectorStore);
-        tools = new KnowledgeRetrievalTools(knowledgeBase);
+        knowledge = new SimpleKnowledge(embeddingModel, vectorStore);
+        tools = new KnowledgeRetrievalTools(knowledge);
         toolkit = new Toolkit();
     }
 
     @Test
     @DisplayName("Should create KnowledgeRetrievalTools with valid knowledge base")
     void testCreate() {
-        KnowledgeRetrievalTools newTools = new KnowledgeRetrievalTools(knowledgeBase);
+        KnowledgeRetrievalTools newTools = new KnowledgeRetrievalTools(knowledge);
         assertNotNull(newTools);
-        assertEquals(knowledgeBase, newTools.getKnowledgeBase());
+        assertEquals(knowledge, newTools.getKnowledgeBase());
     }
 
     @Test
@@ -116,7 +116,7 @@ class KnowledgeRetrievalToolsTest {
         // Add documents to knowledge base
         Document doc1 = createDocument("doc1", "Machine learning is interesting");
         Document doc2 = createDocument("doc2", "Java programming language");
-        knowledgeBase.addDocuments(List.of(doc1, doc2)).block();
+        knowledge.addDocuments(List.of(doc1, doc2)).block();
 
         // Register tool
         toolkit.registerTool(tools);
@@ -141,7 +141,7 @@ class KnowledgeRetrievalToolsTest {
     void testRetrieveKnowledgeWithDefaultLimit() {
         // Add documents
         Document doc = createDocument("doc1", "Test content");
-        knowledgeBase.addDocuments(List.of(doc)).block();
+        knowledge.addDocuments(List.of(doc)).block();
 
         // Register tool
         toolkit.registerTool(tools);
@@ -179,7 +179,7 @@ class KnowledgeRetrievalToolsTest {
         // Add documents
         Document doc1 = createDocument("doc1", "Content 1");
         Document doc2 = createDocument("doc2", "Content 2");
-        knowledgeBase.addDocuments(List.of(doc1, doc2)).block();
+        knowledge.addDocuments(List.of(doc1, doc2)).block();
 
         // Call tool
         String result = tools.retrieveKnowledge("content", 5);
@@ -199,7 +199,7 @@ class KnowledgeRetrievalToolsTest {
         TestMockEmbeddingModel errorModel = new TestMockEmbeddingModel(DIMENSIONS);
         errorModel.setShouldThrowError(true);
         InMemoryStore vectorStore = new InMemoryStore(DIMENSIONS);
-        KnowledgeBase errorKB = new SimpleKnowledge(errorModel, vectorStore);
+        Knowledge errorKB = new SimpleKnowledge(errorModel, vectorStore);
         KnowledgeRetrievalTools errorTools = new KnowledgeRetrievalTools(errorKB);
 
         // Should return error message instead of throwing

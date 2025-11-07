@@ -21,7 +21,7 @@ import io.agentscope.core.hook.PreReasoningEvent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.rag.KnowledgeBase;
+import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.RetrieveConfig;
 import java.util.ArrayList;
@@ -67,7 +67,7 @@ public class GenericRAGHook implements Hook {
 
     private static final Logger log = LoggerFactory.getLogger(GenericRAGHook.class);
 
-    private final KnowledgeBase knowledgeBase;
+    private final Knowledge knowledge;
     private final RetrieveConfig defaultConfig;
     private final boolean enableOnlyForUserQueries;
 
@@ -81,32 +81,32 @@ public class GenericRAGHook implements Hook {
      *   <li>Only for user queries: true</li>
      * </ul>
      *
-     * @param knowledgeBase the knowledge base to retrieve from
+     * @param knowledge the knowledge base to retrieve from
      * @throws IllegalArgumentException if knowledgeBase is null
      */
-    public GenericRAGHook(KnowledgeBase knowledgeBase) {
-        this(knowledgeBase, RetrieveConfig.builder().limit(5).scoreThreshold(0.5).build(), true);
+    public GenericRAGHook(Knowledge knowledge) {
+        this(knowledge, RetrieveConfig.builder().limit(5).scoreThreshold(0.5).build(), true);
     }
 
     /**
      * Creates a GenericRAGHook with custom configuration.
      *
-     * @param knowledgeBase the knowledge base to retrieve from
+     * @param knowledge the knowledge base to retrieve from
      * @param defaultConfig the default retrieval configuration
      * @param enableOnlyForUserQueries if true, only retrieve for user messages
      * @throws IllegalArgumentException if knowledgeBase is null
      */
     public GenericRAGHook(
-            KnowledgeBase knowledgeBase,
+            Knowledge knowledge,
             RetrieveConfig defaultConfig,
             boolean enableOnlyForUserQueries) {
-        if (knowledgeBase == null) {
+        if (knowledge == null) {
             throw new IllegalArgumentException("Knowledge base cannot be null");
         }
         if (defaultConfig == null) {
             throw new IllegalArgumentException("Default config cannot be null");
         }
-        this.knowledgeBase = knowledgeBase;
+        this.knowledge = knowledge;
         this.defaultConfig = defaultConfig;
         this.enableOnlyForUserQueries = enableOnlyForUserQueries;
     }
@@ -154,7 +154,7 @@ public class GenericRAGHook implements Hook {
         }
 
         // Retrieve relevant documents
-        return knowledgeBase
+        return knowledge
                 .retrieve(query, defaultConfig)
                 .flatMap(
                         retrievedDocs -> {
@@ -250,8 +250,8 @@ public class GenericRAGHook implements Hook {
      *
      * @return the knowledge base
      */
-    public KnowledgeBase getKnowledgeBase() {
-        return knowledgeBase;
+    public Knowledge getKnowledgeBase() {
+        return knowledge;
     }
 
     /**

@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.agentscope.core.message.ImageBlock;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.URLSource;
-import io.agentscope.core.rag.EmbeddingModel;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

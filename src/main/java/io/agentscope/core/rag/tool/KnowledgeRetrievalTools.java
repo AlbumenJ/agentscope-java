@@ -15,7 +15,7 @@
  */
 package io.agentscope.core.rag.tool;
 
-import io.agentscope.core.rag.KnowledgeBase;
+import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.RetrieveConfig;
 import io.agentscope.core.tool.Tool;
@@ -49,19 +49,19 @@ import java.util.List;
  */
 public class KnowledgeRetrievalTools {
 
-    private final KnowledgeBase knowledgeBase;
+    private final Knowledge knowledge;
 
     /**
      * Creates a new KnowledgeRetrievalTools instance.
      *
-     * @param knowledgeBase the knowledge base to retrieve from
+     * @param knowledge the knowledge base to retrieve from
      * @throws IllegalArgumentException if knowledgeBase is null
      */
-    public KnowledgeRetrievalTools(KnowledgeBase knowledgeBase) {
-        if (knowledgeBase == null) {
+    public KnowledgeRetrievalTools(Knowledge knowledge) {
+        if (knowledge == null) {
             throw new IllegalArgumentException("Knowledge base cannot be null");
         }
-        this.knowledgeBase = knowledgeBase;
+        this.knowledge = knowledge;
     }
 
     /**
@@ -107,7 +107,7 @@ public class KnowledgeRetrievalTools {
 
         RetrieveConfig config = RetrieveConfig.builder().limit(limit).scoreThreshold(0.5).build();
 
-        return knowledgeBase
+        return knowledge
                 .retrieve(query, config)
                 .map(this::formatDocumentsForTool)
                 .onErrorReturn("Failed to retrieve knowledge for query: " + query)
@@ -149,7 +149,7 @@ public class KnowledgeRetrievalTools {
      *
      * @return the knowledge base
      */
-    public KnowledgeBase getKnowledgeBase() {
-        return knowledgeBase;
+    public Knowledge getKnowledgeBase() {
+        return knowledge;
     }
 }
