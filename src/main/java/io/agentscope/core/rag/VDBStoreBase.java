@@ -67,18 +67,6 @@ public interface VDBStoreBase {
     Mono<List<Document>> search(double[] queryEmbedding, int limit, Double scoreThreshold);
 
     /**
-     * Gets the underlying client (optional).
-     *
-     * <p>This method allows access to advanced features of the vector database.
-     * Returns an empty Mono if not supported.
-     *
-     * @return a Mono that emits the client object, or empty if not supported
-     */
-    default Mono<Object> getClient() {
-        return Mono.empty();
-    }
-
-    /**
      * Deletes a document from the store (optional).
      *
      * <p>Default implementation throws UnsupportedOperationException. Vector stores

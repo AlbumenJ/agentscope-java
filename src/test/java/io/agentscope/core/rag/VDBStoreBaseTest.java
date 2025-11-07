@@ -55,14 +55,6 @@ class VDBStoreBaseTest {
     }
 
     @Test
-    @DisplayName("Should return empty Mono for getClient by default")
-    void testGetClientDefault() {
-        VDBStoreBase store = new TestVDBStore();
-
-        StepVerifier.create(store.getClient()).verifyComplete();
-    }
-
-    @Test
     @DisplayName("Should throw UnsupportedOperationException for delete by default")
     void testDeleteDefault() {
         VDBStoreBase store = new TestVDBStore();

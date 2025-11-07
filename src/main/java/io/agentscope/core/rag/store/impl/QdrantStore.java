@@ -285,14 +285,38 @@ public class QdrantStore implements VDBStoreBase, AutoCloseable {
                 new UnsupportedOperationException("Delete is not implemented for QdrantStore"));
     }
 
-    @Override
-    public Mono<Object> getClient() {
-        return Mono.fromCallable(
-                        () -> {
-                            ensureNotClosed();
-                            return (Object) qdrantClient;
-                        })
-                .subscribeOn(Schedulers.boundedElastic());
+    /**
+     * Gets the underlying Qdrant client for advanced operations.
+     *
+     * <p>This method provides access to the Qdrant client for users who need to perform
+     * operations beyond the standard VDBStoreBase interface, such as:
+     * <ul>
+     *   <li>Custom index configuration
+     *   <li>Advanced filtering and faceting
+     *   <li>Collection management
+     *   <li>Batch operations
+     * </ul>
+     *
+     * @return the QdrantClient instance
+     * @throws VectorStoreException if the store has been closed
+     */
+    public QdrantClient getClient() throws VectorStoreException {
+        ensureNotClosed();
+        return qdrantClient;
+    }
+
+    /**
+     * Gets the underlying gRPC client for low-level operations.
+     *
+     * <p>This provides direct access to the gRPC client for advanced users who need
+     * maximum control over Qdrant operations.
+     *
+     * @return the QdrantGrpcClient instance
+     * @throws VectorStoreException if the store has been closed
+     */
+    public QdrantGrpcClient getGrpcClient() throws VectorStoreException {
+        ensureNotClosed();
+        return grpcClient;
     }
 
     /**
