@@ -133,6 +133,14 @@
             <version>2.0.17</version>
         </dependency>
 
+        <!-- Qdrant Java SDK -->
+        <dependency>
+            <groupId>io.qdrant</groupId>
+            <artifactId>client</artifactId>
+            <version>1.15.0</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Testing dependencies -->
         <dependency>
             <groupId>org.mockito</groupId>

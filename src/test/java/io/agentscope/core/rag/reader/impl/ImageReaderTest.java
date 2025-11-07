@@ -1,0 +1,139 @@
+/*
+ * Copyright 2024-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.agentscope.core.rag.reader.impl;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.agentscope.core.rag.model.Document;
+import io.agentscope.core.rag.model.DocumentMetadata;
+import io.agentscope.core.rag.model.ReaderException;
+import io.agentscope.core.rag.model.ReaderInput;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import reactor.test.StepVerifier;
+
+/**
+ * Unit tests for ImageReader.
+ */
+@Tag("unit")
+@DisplayName("ImageReader Unit Tests")
+class ImageReaderTest {
+
+    @Test
+    @DisplayName("Should create ImageReader with default settings")
+    void testDefaultConstructor() {
+        ImageReader reader = new ImageReader();
+        assertFalse(reader.isOcrEnabled());
+    }
+
+    @Test
+    @DisplayName("Should create ImageReader with OCR enabled")
+    void testConstructorWithOCR() {
+        ImageReader reader = new ImageReader(true);
+        assertTrue(reader.isOcrEnabled());
+    }
+
+    @Test
+    @DisplayName("Should return supported image formats")
+    void testGetSupportedFormats() {
+        ImageReader reader = new ImageReader();
+        List<String> formats = reader.getSupportedFormats();
+
+        assertTrue(formats.contains("jpg"));
+        assertTrue(formats.contains("jpeg"));
+        assertTrue(formats.contains("png"));
+        assertTrue(formats.contains("gif"));
+        assertTrue(formats.contains("bmp"));
+        assertTrue(formats.contains("tiff"));
+        assertTrue(formats.contains("webp"));
+    }
+
+    @Test
+    @DisplayName("Should read image from file path")
+    void testReadFromFilePath() throws ReaderException {
+        ImageReader reader = new ImageReader();
+        ReaderInput input = ReaderInput.fromString("path/to/image.jpg");
+
+        StepVerifier.create(reader.read(input))
+                .assertNext(
+                        documents -> {
+                            assertNotNull(documents);
+                            assertEquals(1, documents.size());
+                            Document doc = documents.get(0);
+                            assertNotNull(doc);
+                            DocumentMetadata metadata = doc.getMetadata();
+                            assertNotNull(metadata);
+
+                            Map<String, Object> content = metadata.getContent();
+                            assertEquals("image", content.get("type"));
+                            assertNotNull(content.get("source"));
+                        })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should read image from URL")
+    void testReadFromURL() throws ReaderException {
+        ImageReader reader = new ImageReader();
+        ReaderInput input = ReaderInput.fromString("https://example.com/image.png");
+
+        StepVerifier.create(reader.read(input))
+                .assertNext(
+                        documents -> {
+                            assertEquals(1, documents.size());
+                            Document doc = documents.get(0);
+                            DocumentMetadata metadata = doc.getMetadata();
+                            Map<String, Object> content = metadata.getContent();
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> source =
+                                    (Map<String, Object>) content.get("source");
+                            assertEquals("url", source.get("type"));
+                            assertEquals("https://example.com/image.png", source.get("url"));
+                        })
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should handle null input")
+    void testNullInput() throws ReaderException {
+        ImageReader reader = new ImageReader();
+
+        StepVerifier.create(reader.read(null)).expectError(ReaderException.class).verify();
+    }
+
+    @Test
+    @DisplayName("Should create document with image content")
+    void testImageDocumentContent() throws ReaderException {
+        ImageReader reader = new ImageReader();
+        ReaderInput input = ReaderInput.fromString("test.jpg");
+
+        StepVerifier.create(reader.read(input))
+                .assertNext(
+                        documents -> {
+                            Document doc = documents.get(0);
+                            DocumentMetadata metadata = doc.getMetadata();
+                            assertEquals(0, metadata.getChunkId());
+                            assertEquals(1, metadata.getTotalChunks());
+                        })
+                .verifyComplete();
+    }
+}
