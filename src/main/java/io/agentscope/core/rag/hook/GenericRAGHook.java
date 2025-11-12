@@ -97,9 +97,7 @@ public class GenericRAGHook implements Hook {
      * @throws IllegalArgumentException if knowledgeBase is null
      */
     public GenericRAGHook(
-            Knowledge knowledge,
-            RetrieveConfig defaultConfig,
-            boolean enableOnlyForUserQueries) {
+            Knowledge knowledge, RetrieveConfig defaultConfig, boolean enableOnlyForUserQueries) {
         if (knowledge == null) {
             throw new IllegalArgumentException("Knowledge base cannot be null");
         }

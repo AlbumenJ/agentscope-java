@@ -19,19 +19,19 @@ import io.agentscope.core.ReActAgent;
 import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.model.DashScopeChatModel;
-import io.agentscope.core.rag.EmbeddingModel;
-import io.agentscope.core.rag.KnowledgeBase;
-import io.agentscope.core.rag.VDBStoreBase;
+import io.agentscope.core.rag.embedding.EmbeddingModel;
+import io.agentscope.core.rag.knowledge.Knowledge;
+import io.agentscope.core.rag.store.VDBStoreBase;
 import io.agentscope.core.rag.embedding.DashScopeTextEmbedding;
-import io.agentscope.core.rag.knowledge.impl.SimpleKnowledge;
+import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.ReaderInput;
 import io.agentscope.core.rag.model.RetrieveConfig;
-import io.agentscope.core.rag.reader.impl.SplitStrategy;
-import io.agentscope.core.rag.reader.impl.TextReader;
+import io.agentscope.core.rag.reader.SplitStrategy;
+import io.agentscope.core.rag.reader.TextReader;
 import io.agentscope.core.rag.registry.KnowledgeRegistry;
-import io.agentscope.core.rag.store.impl.InMemoryStore;
-import io.agentscope.core.rag.store.impl.QdrantStore;
+import io.agentscope.core.rag.store.InMemoryStore;
+import io.agentscope.core.rag.store.QdrantStore;
 import io.agentscope.core.tool.Toolkit;
 import java.io.IOException;
 import java.util.List;
@@ -106,12 +106,12 @@ public class RAGExample {
 
         // Create knowledge base
         System.out.println("Creating knowledge base...");
-        KnowledgeBase knowledgeBase = new SimpleKnowledge(embeddingModel, vectorStore);
+        Knowledge knowledge = new SimpleKnowledge(embeddingModel, vectorStore);
         System.out.println("✓ Knowledge base created\n");
 
         // Add documents to knowledge base
         System.out.println("Adding documents to knowledge base...");
-        addSampleDocuments(knowledgeBase);
+        addSampleDocuments(knowledge);
         System.out.println("✓ Documents added\n");
 
         // Demonstrate Generic Mode
@@ -120,7 +120,7 @@ public class RAGExample {
                 "In Generic mode, knowledge is automatically retrieved and injected\n"
                         + "before each reasoning step. The agent doesn't need to explicitly\n"
                         + "call retrieval tools.\n");
-        demonstrateGenericMode(apiKey, knowledgeBase);
+        demonstrateGenericMode(apiKey, knowledge);
 
         // Demonstrate Agentic Mode
         System.out.println("\n=== Agentic RAG Mode ===");
@@ -128,7 +128,7 @@ public class RAGExample {
                 "In Agentic mode, the agent decides when to retrieve knowledge\n"
                         + "using the retrieve_knowledge tool. This gives the agent more\n"
                         + "control over when to use knowledge.\n");
-        demonstrateAgenticMode(apiKey, knowledgeBase);
+        demonstrateAgenticMode(apiKey, knowledge);
 
         // Demonstrate KnowledgeRegistry
         System.out.println("\n=== Knowledge Registry ===");
@@ -143,9 +143,9 @@ public class RAGExample {
     /**
      * Add sample documents to the knowledge base.
      *
-     * @param knowledgeBase the knowledge base to add documents to
+     * @param knowledge the knowledge base to add documents to
      */
-    private static void addSampleDocuments(KnowledgeBase knowledgeBase) {
+    private static void addSampleDocuments(Knowledge knowledge) {
         // Sample documents about AgentScope
         String[] documents = {
             "AgentScope is a multi-agent system framework developed by ModelScope. It provides a"
@@ -177,7 +177,7 @@ public class RAGExample {
             try {
                 List<Document> docs = reader.read(input).block();
                 if (docs != null && !docs.isEmpty()) {
-                    knowledgeBase.addDocuments(docs).block();
+                    knowledge.addDocuments(docs).block();
                     System.out.println(
                             "  Added document "
                                     + (i + 1)
@@ -195,14 +195,14 @@ public class RAGExample {
      * Demonstrate Generic RAG mode using GenericRAGHook.
      *
      * @param apiKey the API key for the chat model
-     * @param knowledgeBase the knowledge base to use
+     * @param knowledge the knowledge base to use
      */
-    private static void demonstrateGenericMode(String apiKey, KnowledgeBase knowledgeBase)
+    private static void demonstrateGenericMode(String apiKey, Knowledge knowledge)
             throws IOException {
         // Create Generic RAG Hook
         io.agentscope.core.rag.hook.GenericRAGHook ragHook =
                 new io.agentscope.core.rag.hook.GenericRAGHook(
-                        knowledgeBase,
+                        knowledge,
                         RetrieveConfig.builder().limit(3).scoreThreshold(0.3).build(),
                         true);
 
@@ -241,14 +241,14 @@ public class RAGExample {
      * Demonstrate Agentic RAG mode using KnowledgeRetrievalTools.
      *
      * @param apiKey the API key for the chat model
-     * @param knowledgeBase the knowledge base to use
+     * @param knowledge the knowledge base to use
      */
-    private static void demonstrateAgenticMode(String apiKey, KnowledgeBase knowledgeBase)
+    private static void demonstrateAgenticMode(String apiKey, Knowledge knowledge)
             throws IOException {
         // Create toolkit and register knowledge retrieval tools
         Toolkit toolkit = new Toolkit();
         io.agentscope.core.rag.tool.KnowledgeRetrievalTools retrievalTools =
-                new io.agentscope.core.rag.tool.KnowledgeRetrievalTools(knowledgeBase);
+                new io.agentscope.core.rag.tool.KnowledgeRetrievalTools(knowledge);
         toolkit.registerTool(retrievalTools);
 
         // Create agent with knowledge retrieval tools
@@ -291,10 +291,10 @@ public class RAGExample {
             throws IOException {
         // Create multiple knowledge bases
         InMemoryStore store1 = new InMemoryStore(EMBEDDING_DIMENSIONS);
-        KnowledgeBase kb1 = new SimpleKnowledge(embeddingModel, store1);
+        Knowledge kb1 = new SimpleKnowledge(embeddingModel, store1);
 
         InMemoryStore store2 = new InMemoryStore(EMBEDDING_DIMENSIONS);
-        KnowledgeBase kb2 = new SimpleKnowledge(embeddingModel, store2);
+        Knowledge kb2 = new SimpleKnowledge(embeddingModel, store2);
 
         // Add different documents to each knowledge base
         addDocumentsToKB(
@@ -350,10 +350,10 @@ public class RAGExample {
     /**
      * Helper method to add documents to a knowledge base.
      *
-     * @param knowledgeBase the knowledge base
+     * @param knowledge the knowledge base
      * @param documents the document texts
      */
-    private static void addDocumentsToKB(KnowledgeBase knowledgeBase, String... documents) {
+    private static void addDocumentsToKB(Knowledge knowledge, String... documents) {
         TextReader reader = new TextReader(512, SplitStrategy.PARAGRAPH, 50);
 
         for (String docText : documents) {
@@ -361,7 +361,7 @@ public class RAGExample {
             try {
                 List<Document> docs = reader.read(input).block();
                 if (docs != null && !docs.isEmpty()) {
-                    knowledgeBase.addDocuments(docs).block();
+                    knowledge.addDocuments(docs).block();
                 }
             } catch (Exception e) {
                 System.err.println("Error adding document: " + e.getMessage());

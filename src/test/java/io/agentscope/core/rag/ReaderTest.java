@@ -20,9 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.ReaderInput;
-import java.util.List;
-
 import io.agentscope.core.rag.reader.Reader;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

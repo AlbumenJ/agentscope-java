@@ -24,7 +24,6 @@ import io.agentscope.core.message.ImageBlock;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.message.URLSource;
 import io.agentscope.core.model.ExecutionConfig;
-
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;

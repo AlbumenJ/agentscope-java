@@ -88,8 +88,7 @@ class CompositeKnowledgeTest {
         listWithNull.add(kb1);
         listWithNull.add(null);
         listWithNull.add(kb2);
-        assertThrows(
-                IllegalArgumentException.class, () -> new CompositeKnowledge(listWithNull));
+        assertThrows(IllegalArgumentException.class, () -> new CompositeKnowledge(listWithNull));
     }
 
     @Test

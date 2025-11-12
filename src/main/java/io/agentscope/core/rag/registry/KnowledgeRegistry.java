@@ -16,8 +16,8 @@
 package io.agentscope.core.rag.registry;
 
 import io.agentscope.core.ReActAgent;
-import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.hook.GenericRAGHook;
+import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.tool.KnowledgeRetrievalTools;
 import io.agentscope.core.tool.Toolkit;
 import java.util.ArrayList;

@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.rag.embedding.EmbeddingModel;
-import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.hook.GenericRAGHook;
+import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import io.agentscope.core.rag.store.InMemoryStore;
 import io.agentscope.core.tool.Toolkit;

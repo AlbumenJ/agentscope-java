@@ -123,8 +123,7 @@ class GenericRAGHookTest {
     @DisplayName("Should throw exception for null config")
     void testCreateNullConfig() {
         assertThrows(
-                IllegalArgumentException.class,
-                () -> new GenericRAGHook(knowledge, null, true));
+                IllegalArgumentException.class, () -> new GenericRAGHook(knowledge, null, true));
     }
 
     @Test
