@@ -21,8 +21,10 @@ import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
 import io.agentscope.core.rag.model.ReaderException;
 import io.agentscope.core.rag.model.ReaderInput;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
-import java.util.UUID;
 import reactor.core.publisher.Mono;
 
 /**
@@ -89,7 +91,8 @@ public class ImageReader implements Reader {
      * @return a list containing a single Document with image content
      */
     private List<Document> loadImageDocument(String imagePath) {
-        String docId = UUID.randomUUID().toString();
+        // Generate deterministic doc_id using MD5 of image path (matching Python implementation)
+        String docId = generateDocId(imagePath);
 
         // Create ImageBlock with URLSource
         String url;
@@ -153,5 +156,37 @@ public class ImageReader implements Reader {
      */
     public boolean isOcrEnabled() {
         return enableOCR;
+    }
+
+    /**
+     * Generates a deterministic document ID using MD5 hash of the image path.
+     *
+     * <p>This matches the Python implementation which uses hashlib.md5(image_path).
+     *
+     * @param imagePath the image file path or URL
+     * @return MD5 hash of the image path as hex string
+     */
+    private String generateDocId(String imagePath) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] hashBytes = md.digest(imagePath.getBytes(StandardCharsets.UTF_8));
+            return bytesToHex(hashBytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("MD5 algorithm not available", e);
+        }
+    }
+
+    /**
+     * Converts byte array to hexadecimal string.
+     *
+     * @param bytes the byte array to convert
+     * @return hexadecimal string representation
+     */
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }

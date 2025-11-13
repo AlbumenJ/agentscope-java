@@ -96,10 +96,10 @@ class PDFReaderTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when PDF extraction is attempted")
-    void testPDFExtractionRequiresDependencies() throws ReaderException {
+    @DisplayName("Should throw exception when PDF file does not exist")
+    void testNonExistentPDFFile() throws ReaderException {
         PDFReader reader = new PDFReader();
-        ReaderInput input = ReaderInput.fromString("test.pdf");
+        ReaderInput input = ReaderInput.fromString("/non/existent/file.pdf");
 
         StepVerifier.create(reader.read(input)).expectError(ReaderException.class).verify();
     }

@@ -140,4 +140,50 @@ class ImageReaderTest {
                         })
                 .verifyComplete();
     }
+
+    @Test
+    @DisplayName("Should generate deterministic doc_id using MD5 of image path")
+    void testDeterministicDocId() throws ReaderException {
+        ImageReader reader = new ImageReader();
+        String imagePath = "path/to/image.jpg";
+        ReaderInput input = ReaderInput.fromString(imagePath);
+
+        // Read the same image twice
+        List<Document> docs1 = reader.read(input).block();
+        List<Document> docs2 = reader.read(input).block();
+
+        assertNotNull(docs1);
+        assertNotNull(docs2);
+        assertEquals(1, docs1.size());
+        assertEquals(1, docs2.size());
+
+        // Doc IDs should be the same for the same image path
+        String docId1 = docs1.get(0).getMetadata().getDocId();
+        String docId2 = docs2.get(0).getMetadata().getDocId();
+        assertEquals(docId1, docId2, "Doc ID should be deterministic for same image path");
+
+        // Expected MD5 hash of "path/to/image.jpg"
+        String expectedDocId = "1f8fb775f2e55e67d7afc058c1db5ddd";
+        assertEquals(
+                expectedDocId,
+                docId1,
+                "Doc ID should be MD5 hash of image path (matching Python implementation)");
+    }
+
+    @Test
+    @DisplayName("Should generate different doc_ids for different image paths")
+    void testDifferentDocIdsForDifferentPaths() throws ReaderException {
+        ImageReader reader = new ImageReader();
+
+        List<Document> docs1 = reader.read(ReaderInput.fromString("image1.jpg")).block();
+        List<Document> docs2 = reader.read(ReaderInput.fromString("image2.jpg")).block();
+
+        assertNotNull(docs1);
+        assertNotNull(docs2);
+
+        String docId1 = docs1.get(0).getMetadata().getDocId();
+        String docId2 = docs2.get(0).getMetadata().getDocId();
+
+        assertFalse(docId1.equals(docId2), "Different image paths should have different doc IDs");
+    }
 }

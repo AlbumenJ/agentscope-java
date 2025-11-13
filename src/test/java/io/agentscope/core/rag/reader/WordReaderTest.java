@@ -16,7 +16,9 @@
 package io.agentscope.core.rag.reader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.agentscope.core.rag.model.ReaderException;
 import io.agentscope.core.rag.model.ReaderInput;
@@ -40,15 +42,22 @@ class WordReaderTest {
         assertEquals(512, reader.getChunkSize());
         assertEquals(SplitStrategy.PARAGRAPH, reader.getSplitStrategy());
         assertEquals(50, reader.getOverlapSize());
+        assertTrue(reader.isIncludeImage());
+        assertFalse(reader.isSeparateTable());
+        assertEquals(TableFormat.MARKDOWN, reader.getTableFormat());
     }
 
     @Test
     @DisplayName("Should create WordReader with custom settings")
     void testConstructorWithSettings() {
-        WordReader reader = new WordReader(1024, SplitStrategy.TOKEN, 100);
+        WordReader reader =
+                new WordReader(1024, SplitStrategy.TOKEN, 100, false, true, TableFormat.JSON);
         assertEquals(1024, reader.getChunkSize());
         assertEquals(SplitStrategy.TOKEN, reader.getSplitStrategy());
         assertEquals(100, reader.getOverlapSize());
+        assertFalse(reader.isIncludeImage());
+        assertTrue(reader.isSeparateTable());
+        assertEquals(TableFormat.JSON, reader.getTableFormat());
     }
 
     @Test
@@ -56,16 +65,27 @@ class WordReaderTest {
     void testInvalidChunkSize() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new WordReader(0, SplitStrategy.PARAGRAPH, 50));
+                () ->
+                        new WordReader(
+                                0, SplitStrategy.PARAGRAPH, 50, true, false, TableFormat.MARKDOWN));
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new WordReader(-1, SplitStrategy.PARAGRAPH, 50));
+                () ->
+                        new WordReader(
+                                -1,
+                                SplitStrategy.PARAGRAPH,
+                                50,
+                                true,
+                                false,
+                                TableFormat.MARKDOWN));
     }
 
     @Test
     @DisplayName("Should throw exception for null split strategy")
     void testNullSplitStrategy() {
-        assertThrows(IllegalArgumentException.class, () -> new WordReader(512, null, 50));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new WordReader(512, null, 50, true, false, TableFormat.MARKDOWN));
     }
 
     @Test
@@ -73,7 +93,22 @@ class WordReaderTest {
     void testNegativeOverlapSize() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new WordReader(512, SplitStrategy.PARAGRAPH, -1));
+                () ->
+                        new WordReader(
+                                512,
+                                SplitStrategy.PARAGRAPH,
+                                -1,
+                                true,
+                                false,
+                                TableFormat.MARKDOWN));
+    }
+
+    @Test
+    @DisplayName("Should throw exception for null table format")
+    void testNullTableFormat() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new WordReader(512, SplitStrategy.PARAGRAPH, 50, true, false, null));
     }
 
     @Test
@@ -92,10 +127,10 @@ class WordReaderTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when Word extraction is attempted")
-    void testWordExtractionRequiresDependencies() throws ReaderException {
+    @DisplayName("Should throw exception when Word file does not exist")
+    void testNonExistentWordFile() throws ReaderException {
         WordReader reader = new WordReader();
-        ReaderInput input = ReaderInput.fromString("test.docx");
+        ReaderInput input = ReaderInput.fromString("/non/existent/file.docx");
 
         StepVerifier.create(reader.read(input)).expectError(ReaderException.class).verify();
     }
