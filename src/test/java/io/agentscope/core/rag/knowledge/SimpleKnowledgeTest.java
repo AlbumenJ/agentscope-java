@@ -51,14 +51,22 @@ class SimpleKnowledgeTest {
     @BeforeEach
     void setUp() {
         embeddingModel = new MockEmbeddingModel(DIMENSIONS);
-        vectorStore = new InMemoryStore(DIMENSIONS);
-        knowledgeBase = new SimpleKnowledge(embeddingModel, vectorStore);
+        vectorStore = InMemoryStore.builder().dimensions(DIMENSIONS).build();
+        knowledgeBase =
+                SimpleKnowledge.builder()
+                        .embeddingModel(embeddingModel)
+                        .embeddingStore(vectorStore)
+                        .build();
     }
 
     @Test
     @DisplayName("Should create SimpleKnowledge with valid parameters")
     void testCreate() {
-        SimpleKnowledge kb = new SimpleKnowledge(embeddingModel, vectorStore);
+        SimpleKnowledge kb =
+                SimpleKnowledge.builder()
+                        .embeddingModel(embeddingModel)
+                        .embeddingStore(vectorStore)
+                        .build();
         assertNotNull(kb);
         assertEquals(embeddingModel, kb.getEmbeddingModel());
         assertEquals(vectorStore, kb.getEmbeddingStore());
@@ -67,14 +75,17 @@ class SimpleKnowledgeTest {
     @Test
     @DisplayName("Should throw exception for null embedding model")
     void testCreateNullEmbeddingModel() {
-        assertThrows(IllegalArgumentException.class, () -> new SimpleKnowledge(null, vectorStore));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> SimpleKnowledge.builder().embeddingStore(vectorStore).build());
     }
 
     @Test
     @DisplayName("Should throw exception for null vector store")
     void testCreateNullVectorStore() {
         assertThrows(
-                IllegalArgumentException.class, () -> new SimpleKnowledge(embeddingModel, null));
+                IllegalArgumentException.class,
+                () -> SimpleKnowledge.builder().embeddingModel(embeddingModel).build());
     }
 
     @Test
@@ -220,7 +231,11 @@ class SimpleKnowledgeTest {
         // Create a model that throws errors
         MockEmbeddingModel errorModel = new MockEmbeddingModel(DIMENSIONS);
         errorModel.setShouldThrowError(true);
-        SimpleKnowledge errorKB = new SimpleKnowledge(errorModel, vectorStore);
+        SimpleKnowledge errorKB =
+                SimpleKnowledge.builder()
+                        .embeddingModel(errorModel)
+                        .embeddingStore(vectorStore)
+                        .build();
 
         Document doc = createDocument("doc1", "Content");
         // Should complete without error, but document may not be added

@@ -61,8 +61,12 @@ class GenericRAGHookTest {
     @BeforeEach
     void setUp() {
         TestMockEmbeddingModel embeddingModel = new TestMockEmbeddingModel(DIMENSIONS);
-        InMemoryStore vectorStore = new InMemoryStore(DIMENSIONS);
-        knowledge = new SimpleKnowledge(embeddingModel, vectorStore);
+        InMemoryStore vectorStore = InMemoryStore.builder().dimensions(DIMENSIONS).build();
+        knowledge =
+                SimpleKnowledge.builder()
+                        .embeddingModel(embeddingModel)
+                        .embeddingStore(vectorStore)
+                        .build();
         hook = new GenericRAGHook(knowledge);
         mockAgent =
                 new AgentBase("MockAgent") {
@@ -275,8 +279,12 @@ class GenericRAGHookTest {
         // Create a knowledge base that will fail
         TestMockEmbeddingModel errorModel = new TestMockEmbeddingModel(DIMENSIONS);
         errorModel.setShouldThrowError(true);
-        InMemoryStore vectorStore = new InMemoryStore(DIMENSIONS);
-        Knowledge errorKB = new SimpleKnowledge(errorModel, vectorStore);
+        InMemoryStore vectorStore = InMemoryStore.builder().dimensions(DIMENSIONS).build();
+        Knowledge errorKB =
+                SimpleKnowledge.builder()
+                        .embeddingModel(errorModel)
+                        .embeddingStore(vectorStore)
+                        .build();
         GenericRAGHook errorHook = new GenericRAGHook(errorKB);
 
         Msg userMsg =

@@ -43,13 +43,13 @@ class InMemoryStoreTest {
 
     @BeforeEach
     void setUp() {
-        store = new InMemoryStore(DIMENSIONS);
+        store = InMemoryStore.builder().dimensions(DIMENSIONS).build();
     }
 
     @Test
     @DisplayName("Should create store with specified dimensions")
     void testCreateStore() {
-        InMemoryStore newStore = new InMemoryStore(1024);
+        InMemoryStore newStore = InMemoryStore.builder().dimensions(1024).build();
         assertEquals(1024, newStore.getDimensions());
         assertTrue(newStore.isEmpty());
     }
@@ -57,15 +57,19 @@ class InMemoryStoreTest {
     @Test
     @DisplayName("Should create store with default dimensions")
     void testCreateStoreDefault() {
-        InMemoryStore defaultStore = new InMemoryStore();
+        InMemoryStore defaultStore = InMemoryStore.builder().build();
         assertEquals(1024, defaultStore.getDimensions());
     }
 
     @Test
     @DisplayName("Should throw exception for invalid dimensions")
     void testCreateStoreInvalidDimensions() {
-        assertThrows(IllegalArgumentException.class, () -> new InMemoryStore(0));
-        assertThrows(IllegalArgumentException.class, () -> new InMemoryStore(-1));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> InMemoryStore.builder().dimensions(0).build());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> InMemoryStore.builder().dimensions(-1).build());
     }
 
     @Test

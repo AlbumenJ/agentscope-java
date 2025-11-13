@@ -21,8 +21,6 @@ import io.agentscope.core.embedding.dashscope.DashScopeTextEmbedding;
 import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.model.DashScopeChatModel;
-import io.agentscope.core.rag.integration.GenericRAGHook;
-import io.agentscope.core.rag.integration.KnowledgeRetrievalTools;
 import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import io.agentscope.core.rag.model.Document;
@@ -106,7 +104,11 @@ public class RAGExample {
 
         // Create knowledge base
         System.out.println("Creating knowledge base...");
-        Knowledge knowledge = new SimpleKnowledge(embeddingModel, vectorStore);
+        Knowledge knowledge =
+                SimpleKnowledge.builder()
+                        .embeddingModel(embeddingModel)
+                        .embeddingStore(vectorStore)
+                        .build();
         System.out.println("✓ Knowledge base created\n");
 
         // Add documents to knowledge base
@@ -185,21 +187,14 @@ public class RAGExample {
     }
 
     /**
-     * Demonstrate Generic RAG mode using GenericRAGHook.
+     * Demonstrate Generic RAG mode using built-in RAG configuration.
      *
      * @param apiKey the API key for the chat model
      * @param knowledge the knowledge base to use
      */
     private static void demonstrateGenericMode(String apiKey, Knowledge knowledge)
             throws IOException {
-        // Create Generic RAG Hook
-        GenericRAGHook ragHook =
-                new GenericRAGHook(
-                        knowledge,
-                        RetrieveConfig.builder().limit(3).scoreThreshold(0.3).build(),
-                        true);
-
-        // Create agent with Generic RAG Hook
+        // Create agent with built-in Generic RAG configuration
         ReActAgent agent =
                 ReActAgent.builder()
                         .name("RAGAssistant")
@@ -216,9 +211,14 @@ public class RAGExample {
                                         .enableThinking(false)
                                         .formatter(new DashScopeChatFormatter())
                                         .build())
-                        .hook(ragHook)
                         .memory(new InMemoryMemory())
                         .toolkit(new Toolkit())
+                        // Built-in RAG configuration
+                        .knowledge(knowledge)
+                        .ragMode(io.agentscope.core.rag.RAGMode.GENERIC)
+                        .retrieveConfig(
+                                RetrieveConfig.builder().limit(3).scoreThreshold(0.3).build())
+                        .enableOnlyForUserQueries(true)
                         .build();
 
         System.out.println("Generic mode agent created. Try asking:");
@@ -231,20 +231,14 @@ public class RAGExample {
     }
 
     /**
-     * Demonstrate Agentic RAG mode using KnowledgeRetrievalTools.
+     * Demonstrate Agentic RAG mode using built-in RAG configuration.
      *
      * @param apiKey the API key for the chat model
      * @param knowledge the knowledge base to use
      */
     private static void demonstrateAgenticMode(String apiKey, Knowledge knowledge)
             throws IOException {
-        // Create toolkit and register knowledge retrieval tools
-        Toolkit toolkit = new Toolkit();
-        KnowledgeRetrievalTools retrievalTools =
-                new KnowledgeRetrievalTools(knowledge);
-        toolkit.registerTool(retrievalTools);
-
-        // Create agent with knowledge retrieval tools
+        // Create agent with built-in Agentic RAG configuration
         ReActAgent agent =
                 ReActAgent.builder()
                         .name("RAGAgent")
@@ -261,8 +255,11 @@ public class RAGExample {
                                         .enableThinking(false)
                                         .formatter(new DashScopeChatFormatter())
                                         .build())
-                        .toolkit(toolkit)
+                        .toolkit(new Toolkit())
                         .memory(new InMemoryMemory())
+                        // Built-in RAG configuration - Agentic mode
+                        .knowledge(knowledge)
+                        .ragMode(io.agentscope.core.rag.RAGMode.AGENTIC)
                         .build();
 
         System.out.println("Agentic mode agent created. Try asking:");

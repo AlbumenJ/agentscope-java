@@ -42,6 +42,19 @@ import reactor.core.publisher.Mono;
  * <p>For production use with large datasets, consider using a dedicated vector database
  * like Qdrant, ChromaDB, or Pinecone.
  *
+ * <p>Example usage:
+ * <pre>{@code
+ * InMemoryStore store = InMemoryStore.builder()
+ *     .dimensions(1024)
+ *     .build();
+ *
+ * // Add documents
+ * store.add(documents).block();
+ *
+ * // Search
+ * List<Document> results = store.search(queryEmbedding, 5, 0.8).block();
+ * }</pre>
+ *
  * <p><b>Exception Handling:</b>
  * <ul>
  *   <li>{@link IllegalArgumentException} - for invalid input parameters (null documents, null embeddings, invalid limit)
@@ -59,22 +72,12 @@ public class InMemoryStore implements VDBStoreBase {
      * @param dimensions the dimension of vectors that will be stored
      * @throws IllegalArgumentException if dimensions is not positive
      */
-    public InMemoryStore(final int dimensions) {
+    private InMemoryStore(final int dimensions) {
         if (dimensions <= 0) {
             throw new IllegalArgumentException("Dimensions must be positive");
         }
         this.dimensions = dimensions;
         this.documents = new ConcurrentHashMap<>();
-    }
-
-    /**
-     * Creates a new InMemoryStore with default dimensions (1024).
-     *
-     * <p>This constructor is provided for convenience, but it's recommended to specify
-     * the dimensions explicitly to match your embedding model.
-     */
-    public InMemoryStore() {
-        this(1024);
     }
 
     @Override
@@ -231,5 +234,44 @@ public class InMemoryStore implements VDBStoreBase {
      */
     public int getDimensions() {
         return dimensions;
+    }
+
+    /**
+     * Creates a new builder for InMemoryStore.
+     *
+     * @return a new Builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder for InMemoryStore.
+     */
+    public static class Builder {
+        private int dimensions = 1024; // Default dimensions
+
+        private Builder() {}
+
+        /**
+         * Sets the vector dimensions.
+         *
+         * @param dimensions the dimension of vectors to be stored (must be positive)
+         * @return this builder for method chaining
+         */
+        public Builder dimensions(int dimensions) {
+            this.dimensions = dimensions;
+            return this;
+        }
+
+        /**
+         * Builds a new InMemoryStore instance.
+         *
+         * @return a new InMemoryStore instance
+         * @throws IllegalArgumentException if dimensions is not positive
+         */
+        public InMemoryStore build() {
+            return new InMemoryStore(dimensions);
+        }
     }
 }

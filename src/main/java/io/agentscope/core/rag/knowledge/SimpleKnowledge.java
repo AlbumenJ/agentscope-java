@@ -45,17 +45,25 @@ import reactor.core.publisher.Mono;
  *
  * <p>Example usage:
  * <pre>{@code
- * EmbeddingModel embeddingModel = new DashScopeTextEmbedding(apiKey, "text-embedding-v3", 1024);
- * VDBStoreBase vectorStore = new InMemoryStore(1024);
- * KnowledgeBase knowledgeBase = new SimpleKnowledge(embeddingModel, vectorStore);
+ * EmbeddingModel embeddingModel = DashScopeTextEmbedding.builder()
+ *     .apiKey(apiKey)
+ *     .modelName("text-embedding-v3")
+ *     .dimensions(1024)
+ *     .build();
+ * VDBStoreBase vectorStore = InMemoryStore.builder().dimensions(1024).build();
+ *
+ * SimpleKnowledge knowledge = SimpleKnowledge.builder()
+ *     .embeddingModel(embeddingModel)
+ *     .embeddingStore(vectorStore)
+ *     .build();
  *
  * // Add documents
  * List<Document> documents = reader.read(input).block();
- * knowledgeBase.addDocuments(documents).block();
+ * knowledge.addDocuments(documents).block();
  *
  * // Retrieve documents
  * RetrieveConfig config = RetrieveConfig.builder().limit(5).scoreThreshold(0.5).build();
- * List<Document> results = knowledgeBase.retrieve("query text", config).block();
+ * List<Document> results = knowledge.retrieve("query text", config).block();
  * }</pre>
  */
 public class SimpleKnowledge implements Knowledge {
@@ -72,7 +80,7 @@ public class SimpleKnowledge implements Knowledge {
      * @param embeddingStore the vector store to use for storage and search
      * @throws IllegalArgumentException if any parameter is null
      */
-    public SimpleKnowledge(EmbeddingModel embeddingModel, VDBStoreBase embeddingStore) {
+    private SimpleKnowledge(EmbeddingModel embeddingModel, VDBStoreBase embeddingStore) {
         if (embeddingModel == null) {
             throw new IllegalArgumentException("Embedding model cannot be null");
         }
@@ -229,5 +237,62 @@ public class SimpleKnowledge implements Knowledge {
      */
     private ContentBlock extractContentBlock(DocumentMetadata metadata) {
         return metadata.getContent();
+    }
+
+    /**
+     * Creates a new builder for SimpleKnowledge.
+     *
+     * @return a new Builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder for SimpleKnowledge.
+     */
+    public static class Builder {
+        private EmbeddingModel embeddingModel;
+        private VDBStoreBase embeddingStore;
+
+        private Builder() {}
+
+        /**
+         * Sets the embedding model.
+         *
+         * @param embeddingModel the embedding model to use
+         * @return this builder for method chaining
+         */
+        public Builder embeddingModel(EmbeddingModel embeddingModel) {
+            this.embeddingModel = embeddingModel;
+            return this;
+        }
+
+        /**
+         * Sets the embedding store (vector database).
+         *
+         * @param embeddingStore the vector store to use
+         * @return this builder for method chaining
+         */
+        public Builder embeddingStore(VDBStoreBase embeddingStore) {
+            this.embeddingStore = embeddingStore;
+            return this;
+        }
+
+        /**
+         * Builds a new SimpleKnowledge instance.
+         *
+         * @return a new SimpleKnowledge instance
+         * @throws IllegalArgumentException if required parameters are missing
+         */
+        public SimpleKnowledge build() {
+            if (embeddingModel == null) {
+                throw new IllegalArgumentException("Embedding model is required");
+            }
+            if (embeddingStore == null) {
+                throw new IllegalArgumentException("Embedding store is required");
+            }
+            return new SimpleKnowledge(embeddingModel, embeddingStore);
+        }
     }
 }
