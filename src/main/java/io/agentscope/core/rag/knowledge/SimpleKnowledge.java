@@ -15,9 +15,9 @@
  */
 package io.agentscope.core.rag.knowledge;
 
+import io.agentscope.core.embedding.EmbeddingModel;
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.rag.embedding.EmbeddingModel;
 import io.agentscope.core.rag.model.Document;
 import io.agentscope.core.rag.model.DocumentMetadata;
 import io.agentscope.core.rag.model.RetrieveConfig;

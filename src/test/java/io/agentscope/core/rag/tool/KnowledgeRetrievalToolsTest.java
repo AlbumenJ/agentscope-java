@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.agentscope.core.rag.embedding.EmbeddingModel;
+import io.agentscope.core.embedding.EmbeddingModel;
+import io.agentscope.core.rag.integration.KnowledgeRetrievalTools;
 import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.knowledge.SimpleKnowledge;
 import io.agentscope.core.rag.model.Document;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.core.rag.embedding;
+package io.agentscope.core.embedding;
 
 import io.agentscope.core.model.ExecutionConfig;
 import java.time.Duration;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.core.rag.tool;
+package io.agentscope.core.rag.integration;
 
 import io.agentscope.core.rag.knowledge.Knowledge;
 import io.agentscope.core.rag.model.Document;

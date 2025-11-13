@@ -19,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import io.agentscope.core.embedding.EmbeddingException;
+import io.agentscope.core.embedding.EmbeddingUtils;
 import io.agentscope.core.model.ExecutionConfig;
 import java.time.Duration;
 import java.util.ArrayList;

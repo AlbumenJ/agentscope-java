@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.core.rag.embedding;
+package io.agentscope.core.embedding.dashscope;
 
 import com.alibaba.dashscope.embeddings.MultiModalEmbedding;
 import com.alibaba.dashscope.embeddings.MultiModalEmbeddingItemImage;
@@ -21,6 +21,9 @@ import com.alibaba.dashscope.embeddings.MultiModalEmbeddingItemText;
 import com.alibaba.dashscope.embeddings.MultiModalEmbeddingParam;
 import com.alibaba.dashscope.embeddings.MultiModalEmbeddingResult;
 import com.alibaba.dashscope.embeddings.MultiModalEmbeddingResultItem;
+import io.agentscope.core.embedding.EmbeddingException;
+import io.agentscope.core.embedding.EmbeddingModel;
+import io.agentscope.core.embedding.EmbeddingUtils;
 import io.agentscope.core.formatter.dashscope.DashScopeMediaConverter;
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.ImageBlock;

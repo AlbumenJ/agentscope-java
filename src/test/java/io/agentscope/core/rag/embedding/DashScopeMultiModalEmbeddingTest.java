@@ -18,6 +18,8 @@ package io.agentscope.core.rag.embedding;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import io.agentscope.core.embedding.EmbeddingException;
+import io.agentscope.core.embedding.dashscope.DashScopeMultiModalEmbedding;
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.model.ExecutionConfig;
