@@ -21,6 +21,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.beans.Transient;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,6 +49,9 @@ import java.util.stream.Collectors;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Msg {
 
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneId.systemDefault());
+
     private final String id;
 
     private final String name;
@@ -56,6 +62,8 @@ public class Msg {
 
     private final Map<String, Object> metadata;
 
+    private final String timestamp;
+
     /**
      * Creates a new message with the specified fields.
      *
@@ -64,6 +72,7 @@ public class Msg {
      * @param role The role of the message sender (user, assistant, system, or tool)
      * @param content List of content blocks that make up the message content
      * @param metadata Optional metadata map for additional information
+     * @param timestamp Optional timestamp string (if null, will be generated automatically)
      */
     @JsonCreator
     private Msg(
@@ -71,7 +80,8 @@ public class Msg {
             @JsonProperty("name") String name,
             @JsonProperty("role") MsgRole role,
             @JsonProperty("content") List<ContentBlock> content,
-            @JsonProperty("metadata") Map<String, Object> metadata) {
+            @JsonProperty("metadata") Map<String, Object> metadata,
+            @JsonProperty("timestamp") String timestamp) {
         this.id = id;
         this.name = name;
         this.role = role;
@@ -81,6 +91,7 @@ public class Msg {
                         : Collections.unmodifiableList(new ArrayList<>(content));
         this.metadata =
                 metadata == null ? null : Collections.unmodifiableMap(new HashMap<>(metadata));
+        this.timestamp = timestamp != null ? timestamp : TIMESTAMP_FORMATTER.format(Instant.now());
     }
 
     /**
@@ -135,6 +146,15 @@ public class Msg {
      */
     public Map<String, Object> getMetadata() {
         return metadata;
+    }
+
+    /**
+     * Gets the timestamp of this message.
+     *
+     * @return The timestamp string in format "yyyy-MM-dd HH:mm:ss.SSS"
+     */
+    public String getTimestamp() {
+        return timestamp;
     }
 
     /**
@@ -277,6 +297,8 @@ public class Msg {
 
         private Map<String, Object> metadata;
 
+        private String timestamp;
+
         /**
          * Creates a new builder with a randomly generated message ID.
          */
@@ -366,12 +388,24 @@ public class Msg {
         }
 
         /**
+         * Sets the timestamp for the message.
+         *
+         * @param timestamp The timestamp string
+         * @return This builder for chaining
+         */
+        public Builder timestamp(String timestamp) {
+            this.timestamp = timestamp;
+            return this;
+        }
+
+        /**
          * Builds a new message instance with the configured properties.
+         * If timestamp is not set, it will be auto-generated.
          *
          * @return A new immutable message
          */
         public Msg build() {
-            return new Msg(id, name, role, content, metadata);
+            return new Msg(id, name, role, content, metadata, timestamp);
         }
     }
 }
