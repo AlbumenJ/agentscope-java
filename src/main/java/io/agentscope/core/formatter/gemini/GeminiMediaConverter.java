@@ -24,6 +24,9 @@ import io.agentscope.core.message.Source;
 import io.agentscope.core.message.URLSource;
 import io.agentscope.core.message.VideoBlock;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -124,16 +127,31 @@ public class GeminiMediaConverter {
     /**
      * Read a file from URL/path as byte array.
      *
+     * <p>Supports both remote URLs (http://, https://) and local file paths.
+     *
      * @param url File URL or path
      * @return File content as byte array
      * @throws IOException If file cannot be read
      */
     private byte[] readFileAsBytes(String url) throws IOException {
-        Path path = Paths.get(url);
-        if (!Files.exists(path)) {
-            throw new IOException("File not found: " + url);
+        // Check if it's a remote URL
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            try {
+                URL remoteUrl = URI.create(url).toURL();
+                try (InputStream in = remoteUrl.openStream()) {
+                    return in.readAllBytes();
+                }
+            } catch (IOException e) {
+                throw new IOException("Failed to download remote file: " + url, e);
+            }
+        } else {
+            // Local file path
+            Path path = Paths.get(url);
+            if (!Files.exists(path)) {
+                throw new IOException("File not found: " + url);
+            }
+            return Files.readAllBytes(path);
         }
-        return Files.readAllBytes(path);
     }
 
     /**

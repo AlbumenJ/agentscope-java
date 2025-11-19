@@ -17,6 +17,7 @@ package io.agentscope.core.model;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.genai.Client;
+import com.google.genai.ResponseStream;
 import com.google.genai.types.ClientOptions;
 import com.google.genai.types.Content;
 import com.google.genai.types.GenerateContentConfig;
@@ -143,7 +144,8 @@ public class GeminiChatModel implements Model {
      * Stream chat completion responses from Gemini's API.
      *
      * <p>This method internally handles message formatting using the configured formatter.
-     * Currently returns non-streaming responses wrapped in Flux for API compatibility.
+     * When streaming is enabled, it returns incremental responses as they arrive.
+     * When streaming is disabled, it returns a single complete response.
      *
      * @param messages AgentScope messages to send to the model
      * @param tools Optional list of tool schemas (null or empty if no tools)
@@ -155,10 +157,11 @@ public class GeminiChatModel implements Model {
             List<Msg> messages, List<ToolSchema> tools, GenerateOptions options) {
         Instant startTime = Instant.now();
         log.debug(
-                "Gemini stream: model={}, messages={}, tools_present={}",
+                "Gemini stream: model={}, messages={}, tools_present={}, streaming={}",
                 modelName,
                 messages != null ? messages.size() : 0,
-                tools != null && !tools.isEmpty());
+                tools != null && !tools.isEmpty(),
+                streamEnabled);
 
         return Flux.defer(
                         () -> {
@@ -186,16 +189,44 @@ public class GeminiChatModel implements Model {
 
                                 GenerateContentConfig config = configBuilder.build();
 
-                                // Call Gemini API
-                                GenerateContentResponse response =
-                                        client.models.generateContent(
-                                                modelName, formattedMessages, config);
+                                // Choose API based on streaming flag
+                                if (streamEnabled) {
+                                    // Use streaming API
+                                    ResponseStream<GenerateContentResponse> responseStream =
+                                            client.models.generateContentStream(
+                                                    modelName, formattedMessages, config);
 
-                                // Parse response using formatter
-                                ChatResponse chatResponse =
-                                        formatter.parseResponse(response, startTime);
+                                    // Convert ResponseStream to Flux
+                                    return Flux.fromIterable(responseStream)
+                                            .publishOn(Schedulers.boundedElastic())
+                                            .map(
+                                                    response ->
+                                                            formatter.parseResponse(
+                                                                    response, startTime))
+                                            .doFinally(
+                                                    signalType -> {
+                                                        // Close the stream when done
+                                                        try {
+                                                            responseStream.close();
+                                                        } catch (Exception e) {
+                                                            log.warn(
+                                                                    "Error closing response stream:"
+                                                                            + " {}",
+                                                                    e.getMessage());
+                                                        }
+                                                    });
+                                } else {
+                                    // Use non-streaming API
+                                    GenerateContentResponse response =
+                                            client.models.generateContent(
+                                                    modelName, formattedMessages, config);
 
-                                return Flux.just(chatResponse);
+                                    // Parse response using formatter
+                                    ChatResponse chatResponse =
+                                            formatter.parseResponse(response, startTime);
+
+                                    return Flux.just(chatResponse);
+                                }
 
                             } catch (Exception e) {
                                 log.error("Gemini API call failed: {}", e.getMessage(), e);
@@ -240,7 +271,7 @@ public class GeminiChatModel implements Model {
     public static class Builder {
         private String apiKey;
         private String modelName = "gemini-2.5-flash";
-        private boolean streamEnabled = false;
+        private boolean streamEnabled = true;
         private String project;
         private String location;
         private Boolean vertexAI;

@@ -18,6 +18,7 @@ package io.agentscope.core.formatter.gemini;
 import com.google.genai.types.Content;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.Part;
 import io.agentscope.core.formatter.AbstractBaseFormatter;
 import io.agentscope.core.formatter.FormatterCapabilities;
 import io.agentscope.core.message.AudioBlock;
@@ -100,7 +101,7 @@ public class GeminiMultiAgentFormatter
                             .role("user")
                             .parts(
                                     List.of(
-                                            com.google.genai.types.Part.builder()
+                                            Part.builder()
                                                     .text(extractTextContent(systemMsg))
                                                     .build()))
                             .build();

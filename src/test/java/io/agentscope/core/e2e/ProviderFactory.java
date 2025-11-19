@@ -122,6 +122,11 @@ public class ProviderFactory {
             //            builders.add(new DashScopeProvider.QwenVlMaxMultiAgentDashScope());
         }
 
+        if (hasGoogleKey()) {
+            builders.add(new GeminiProvider.Gemini25FlashGemini());
+            builders.add(new GeminiProvider.Gemini25FlashMultiAgentGemini());
+        }
+
         return builders.build();
     }
 
@@ -143,6 +148,11 @@ public class ProviderFactory {
             builders.add(new DashScopeCompatibleProvider.Qwen3OmniFlashMultiAgentOpenAI());
             builders.add(new DashScopeCompatibleProvider.QwenOmniTurboOpenAI());
             builders.add(new DashScopeCompatibleProvider.QwenOmniTurboMultiAgentOpenAI());
+        }
+
+        if (hasGoogleKey()) {
+            builders.add(new GeminiProvider.Gemini25FlashGemini());
+            builders.add(new GeminiProvider.Gemini25FlashMultiAgentGemini());
         }
 
         return builders.build();
@@ -170,6 +180,11 @@ public class ProviderFactory {
             builders.add(new DashScopeProvider.Qwen3VlPlusMultiAgentDashScope());
         }
 
+        if (hasGoogleKey()) {
+            builders.add(new GeminiProvider.Gemini25FlashGemini());
+            builders.add(new GeminiProvider.Gemini25FlashMultiAgentGemini());
+        }
+
         return builders.build();
     }
 
@@ -184,6 +199,11 @@ public class ProviderFactory {
         if (hasDashScopeKey()) {
             builders.add(new DashScopeProvider.QwenPlusThinkingDashScope());
             builders.add(new DashScopeProvider.QwenPlusThinkingMultiAgentDashScope());
+        }
+
+        if (hasGoogleKey()) {
+            builders.add(new GeminiProvider.Gemini25FlashGemini());
+            builders.add(new GeminiProvider.Gemini25FlashMultiAgentGemini());
         }
 
         return builders.build();
@@ -213,6 +233,11 @@ public class ProviderFactory {
             //            builders.add(new DashScopeProvider.Qwen3VlPlusMultiAgentDashScope());
         }
 
+        if (hasGoogleKey()) {
+            builders.add(new GeminiProvider.Gemini25FlashGemini());
+            builders.add(new GeminiProvider.Gemini25FlashMultiAgentGemini());
+        }
+
         return builders.build();
     }
 
@@ -234,6 +259,11 @@ public class ProviderFactory {
             builders.add(new DashScopeCompatibleProvider.Qwen3VlPlusMultiAgentOpenAI());
             builders.add(new DashScopeProvider.Qwen3VlPlusDashScope());
             builders.add(new DashScopeProvider.Qwen3VlPlusMultiAgentDashScope());
+        }
+
+        if (hasGoogleKey()) {
+            builders.add(new GeminiProvider.Gemini25FlashGemini());
+            builders.add(new GeminiProvider.Gemini25FlashMultiAgentGemini());
         }
 
         return builders.build();

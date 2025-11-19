@@ -18,6 +18,7 @@ package io.agentscope.core.formatter.gemini;
 import com.google.genai.types.Content;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.ThinkingConfig;
 import com.google.genai.types.Tool;
 import com.google.genai.types.ToolConfig;
 import io.agentscope.core.formatter.AbstractBaseFormatter;
@@ -111,6 +112,17 @@ public class GeminiChatFormatter
                 options,
                 defaultOptions,
                 configBuilder::presencePenalty);
+
+        // Apply ThinkingConfig if either includeThoughts or thinkingBudget is set
+        Integer thinkingBudget =
+                getOptionOrDefault(options, defaultOptions, GenerateOptions::getThinkingBudget);
+
+        if (thinkingBudget != null) {
+            ThinkingConfig.Builder thinkingConfigBuilder = ThinkingConfig.builder();
+            thinkingConfigBuilder.includeThoughts(true);
+            thinkingConfigBuilder.thinkingBudget(thinkingBudget);
+            configBuilder.thinkingConfig(thinkingConfigBuilder.build());
+        }
     }
 
     /**
