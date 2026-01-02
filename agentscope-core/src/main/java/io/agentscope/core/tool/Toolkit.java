@@ -269,6 +269,68 @@ public class Toolkit {
         return toolRegistry.getToolNames();
     }
 
+    // ==================== External Tool Support ====================
+
+    /**
+     * Register an external tool using only its schema definition.
+     *
+     * <p>External tools are tools that will be executed outside the framework. When a model
+     * returns a call to an external tool, the framework will not execute it but instead
+     * return the tool call to the user via a message with
+     * {@link io.agentscope.core.message.GenerateReason#TOOL_SUSPENDED}.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * ToolSchema schema = ToolSchema.builder()
+     *     .name("query_database")
+     *     .description("Query external database")
+     *     .parameters(Map.of(
+     *         "type", "object",
+     *         "properties", Map.of("sql", Map.of("type", "string")),
+     *         "required", List.of("sql")
+     *     ))
+     *     .build();
+     *
+     * toolkit.registerSchema(schema);
+     * }</pre>
+     *
+     * @param schema The tool schema containing name, description, and parameters
+     * @throws NullPointerException if schema is null
+     * @see SchemaOnlyTool
+     * @see #isExternalTool(String)
+     */
+    public void registerSchema(ToolSchema schema) {
+        registerAgentTool(new SchemaOnlyTool(schema));
+    }
+
+    /**
+     * Register multiple external tools using their schema definitions.
+     *
+     * @param schemas List of tool schemas to register
+     * @throws NullPointerException if schemas is null
+     * @see #registerSchema(ToolSchema)
+     */
+    public void registerSchemas(List<ToolSchema> schemas) {
+        if (schemas != null) {
+            schemas.forEach(this::registerSchema);
+        }
+    }
+
+    /**
+     * Check if a tool is an external tool (schema-only, requires user execution).
+     *
+     * <p>External tools are registered using {@link #registerSchema(ToolSchema)} and should
+     * be executed outside the framework. When this method returns true, the framework will
+     * skip execution and return the tool call to the user.
+     *
+     * @param toolName The name of the tool to check
+     * @return true if the tool is an external tool (SchemaOnlyTool), false otherwise
+     */
+    public boolean isExternalTool(String toolName) {
+        AgentTool tool = getTool(toolName);
+        return tool instanceof SchemaOnlyTool;
+    }
+
     /**
      * Get tool schemas as ToolSchema objects.
      * Updated to respect active tool groups.

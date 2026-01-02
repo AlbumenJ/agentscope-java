@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import org.slf4j.Logger;
@@ -189,6 +188,16 @@ class ToolExecutor {
 
         return tool.callAsync(executionParam)
                 .onErrorResume(
+                        ToolSuspendException.class,
+                        e -> {
+                            // Convert ToolSuspendException to pending result
+                            logger.debug(
+                                    "Tool '{}' suspended: {}",
+                                    toolCall.getName(),
+                                    e.getReason() != null ? e.getReason() : "no reason");
+                            return Mono.just(ToolResultBlock.pending(toolCall, e));
+                        })
+                .onErrorResume(
                         e -> {
                             String errorMsg =
                                     e.getMessage() != null
@@ -325,7 +334,8 @@ class ToolExecutor {
                                                 "Retrying tool call (attempt {}/{}) due to: {}",
                                                 signal.totalRetriesInARow() + 1,
                                                 maxAttempts - 1,
-                                                signal.failure().getMessage(), signal.failure()));
+                                                signal.failure().getMessage(),
+                                                signal.failure()));
 
         logger.debug(
                 "Applied retry config: maxAttempts={} for tool: {}",

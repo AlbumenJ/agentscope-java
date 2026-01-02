@@ -220,8 +220,7 @@ public abstract class StructuredOutputCapableAgent extends AgentBase {
                             if (responseData != null) {
                                 try {
                                     contentText =
-                                            new ObjectMapper()
-                                                    .writeValueAsString(responseData);
+                                            new ObjectMapper().writeValueAsString(responseData);
                                 } catch (Exception e) {
                                     contentText = responseData.toString();
                                 }
