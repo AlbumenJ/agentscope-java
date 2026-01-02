@@ -28,7 +28,6 @@ import io.agentscope.core.tool.subagent.SubAgentTool;
 import io.agentscope.core.tracing.TracerRegistry;
 import java.lang.reflect.Method;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,7 +54,7 @@ import reactor.core.publisher.Mono;
  *   <li>ToolSchemaGenerator: Generates JSON schemas for tool parameters</li>
  *   <li>ToolMethodInvoker: Handles method invocation and parameter conversion</li>
  *   <li>ToolResultConverter: Converts method results to ToolResultBlock</li>
- *   <li>ParallelToolExecutor: Handles parallel/sequential tool execution</li>
+ *   <li>ToolExecutor: Handles parallel/sequential tool execution with validation</li>
  * </ul>
  *
  * <p><b>Features:</b>
@@ -80,7 +79,7 @@ public class Toolkit {
     private final ToolResultConverter responseConverter;
     private final ToolMethodInvoker methodInvoker;
     private final ToolkitConfig config;
-    private final ParallelToolExecutor executor;
+    private final ToolExecutor executor;
     private BiConsumer<ToolUseBlock, ToolResultBlock> chunkCallback;
 
     /**
@@ -111,9 +110,16 @@ public class Toolkit {
 
         // Create executor based on configuration
         if (config.hasCustomExecutor()) {
-            this.executor = new ParallelToolExecutor(this, config.getExecutorService());
+            this.executor =
+                    new ToolExecutor(
+                            toolRegistry,
+                            groupManager,
+                            this.config,
+                            methodInvoker,
+                            config.getExecutorService());
         } else {
-            this.executor = new ParallelToolExecutor(this);
+            this.executor =
+                    new ToolExecutor(toolRegistry, groupManager, this.config, methodInvoker);
         }
     }
 
@@ -336,7 +342,7 @@ public class Toolkit {
      */
     public void setChunkCallback(BiConsumer<ToolUseBlock, ToolResultBlock> callback) {
         this.chunkCallback = callback;
-        methodInvoker.setChunkCallback(callback);
+        executor.setChunkCallback(callback);
     }
 
     /**
@@ -364,83 +370,7 @@ public class Toolkit {
      * @return Mono containing execution result
      */
     public Mono<ToolResultBlock> callTool(ToolCallParam param) {
-        // TODO replace with executeToolCore
-        return TracerRegistry.get().callTool(this, param, () -> executeToolCore(param));
-    }
-
-    /**
-     * Core tool execution logic (called by both public API and ParallelToolExecutor).
-     *
-     * <p>This is the single source of truth for tool execution business logic. Package-private for
-     * internal use.
-     *
-     * @param param Tool call parameters containing all execution information
-     * @return Mono containing ToolResultBlock
-     */
-    Mono<ToolResultBlock> executeToolCore(ToolCallParam param) {
-        ToolUseBlock toolCall = param.getToolUseBlock();
-        AgentTool tool = getTool(toolCall.getName());
-        if (tool == null) {
-            return Mono.just(ToolResultBlock.error("Tool not found: " + toolCall.getName()));
-        }
-
-        // Check if tool is in active group
-        RegisteredToolFunction registered = toolRegistry.getRegisteredTool(toolCall.getName());
-        if (registered != null) {
-            String groupName = registered.getGroupName();
-            if (!groupManager.isInActiveGroup(groupName)) {
-                String errorMsg =
-                        String.format(
-                                "Unauthorized tool call: '%s' is not available (group '%s' is not"
-                                        + " active)",
-                                toolCall.getName(), groupName != null ? groupName : "ungrouped");
-                logger.warn(errorMsg);
-                return Mono.just(ToolResultBlock.error(errorMsg));
-            }
-        }
-
-        // Merge preset parameters with provided input
-        // Preset parameters have lower priority and can be overridden by param.input
-        Map<String, Object> mergedInput = new HashMap<>();
-        if (registered != null) {
-            mergedInput.putAll(registered.getPresetParameters());
-        }
-        // If param already has merged input, use it; otherwise merge from toolUseBlock
-        if (param.getInput() != null && !param.getInput().isEmpty()) {
-            mergedInput.putAll(param.getInput());
-        } else if (toolCall.getInput() != null) {
-            mergedInput.putAll(toolCall.getInput());
-        }
-
-        // Merge context with toolkit's default context
-        // Ensure toolkit default context is always included as the base
-        ToolExecutionContext toolkitContext = config.getDefaultContext();
-        ToolExecutionContext finalContext =
-                ToolExecutionContext.merge(param.getContext(), toolkitContext);
-
-        // Create ToolEmitter for streaming tool output
-        ToolEmitter toolEmitter = new DefaultToolEmitter(toolCall, chunkCallback);
-
-        // Build final execution param with merged input, context, and emitter
-        ToolCallParam executionParam =
-                ToolCallParam.builder()
-                        .toolUseBlock(toolCall)
-                        .input(mergedInput)
-                        .agent(param.getAgent())
-                        .context(finalContext)
-                        .emitter(toolEmitter)
-                        .build();
-
-        return tool.callAsync(executionParam)
-                .onErrorResume(
-                        e -> {
-                            String errorMsg =
-                                    e.getMessage() != null
-                                            ? e.getMessage()
-                                            : e.getClass().getSimpleName();
-                            return Mono.just(
-                                    ToolResultBlock.error("Tool execution failed: " + errorMsg));
-                        });
+        return TracerRegistry.get().callTool(this, param, () -> executor.execute(param));
     }
 
     /**
@@ -472,7 +402,7 @@ public class Toolkit {
                         ExecutionConfig.mergeConfigs(
                                 config.getExecutionConfig(), ExecutionConfig.TOOL_DEFAULTS));
 
-        return executor.executeTools(
+        return executor.executeAll(
                 toolCalls, config.isParallel(), effectiveConfig, agent, agentContext);
     }
 
